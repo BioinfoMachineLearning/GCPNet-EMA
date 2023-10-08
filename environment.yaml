@@ -1,5 +1,6 @@
 name: GCPNet-EMA
 channels:
+  - bioconda
   - pytorch
   - nvidia
   - conda-forge
@@ -47,6 +48,7 @@ dependencies:
   - lame=3.100=h166bdaf_1003
   - lcms2=2.15=hfd0df8a_0
   - ld_impl_linux-64=2.40=h41732ed_0
+  - lddt=2.2=h9ee0642_0
   - lerc=4.0.0=h27087fc_0
   - libabseil=20230802.1=cxx17_h59595ed_0
   - libblas=3.9.0=16_linux64_mkl
@@ -237,10 +239,12 @@ dependencies:
       - pillow==9.3.0
       - plotly==5.17.0
       - prettytable==3.9.0
+      - prody==2.4.1
       - prompt-toolkit==3.0.39
       - proteinworkshop==0.2.4
       - ptyprocess==0.7.0
       - pure-eval==0.2.2
+      - py3dmol==2.0.4
       - pydantic==1.10.13
       - pydantic-core==2.4.0
       - pyjwt==2.8.0
@@ -262,6 +266,7 @@ dependencies:
       - scikit-learn==1.3.1
       - scipy==1.11.3
       - seaborn==0.13.0
+      - sidechainnet==0.7.6
       - sniffio==1.3.0
       - soupsieve==2.5
       - sqlalchemy==2.0.21

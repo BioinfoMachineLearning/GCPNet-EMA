@@ -5,6 +5,7 @@
 <a href="https://pytorch.org/get-started/locally/"><img alt="PyTorch" src="https://img.shields.io/badge/PyTorch-ee4c2c?logo=pytorch&logoColor=white"></a>
 <a href="https://pytorchlightning.ai/"><img alt="Lightning" src="https://img.shields.io/badge/-Lightning-792ee5?logo=pytorchlightning&logoColor=white"></a>
 <a href="https://hydra.cc/"><img alt="Config: Hydra" src="https://img.shields.io/badge/Config-Hydra-89b8cd"></a>
+
 <!-- [![Paper](http://img.shields.io/badge/paper-arxiv.1001.2234-B31B1B.svg)](https://www.nature.com/articles/nature14539)
 [![Conference](http://img.shields.io/badge/AnyConference-year-4b44ce.svg)](https://papers.nips.cc/paper/2020) -->
 
@@ -51,6 +52,18 @@ conda activate GCPNet-EMA  # NOTE: one still needs to use `conda` to (de)activat
 # install local project as package
 pip3 install -e .
 ```
+
+**Note**: TM-score is required to score predicted protein structures, where one can install it as follows:
+
+```bash
+# download and compile TM-score
+mkdir -p ~/Programs && cd ~/Programs
+wget https://zhanggroup.org/TM-score/TMscore.cpp
+g++ -static -O3 -ffast-math -lm -o TMscore TMscore.cpp
+rm TMscore.cpp
+```
+
+Make sure to update the `tmscore_exec_path` value in e.g., `configs/paths/default.yaml` to reflect where you have placed the TM-score executable on your machine. Also, make sure that `lddt_exec_path` points to the `bin/lddt` path within your `GCPNet-EMA` Conda environment, where `lddt` is installed automatically as described in `environment.yaml`.
 
 ## GCPNet for protein structure EMA (`GCPNet-EMA`)
 
@@ -175,9 +188,10 @@ rm env.yaml # clean up temporary environment file
 ## Acknowledgements
 
 GCPNet-EMA builds upon the source code and data from the following project(s):
-* [EnQA](https://github.com/BioinfoMachineLearning/EnQA)
-* [GCPNet](https://github.com/BioinfoMachineLearning/GCPNet)
-* [lightning-hydra-template](https://github.com/ashleve/lightning-hydra-template)
+
+- [EnQA](https://github.com/BioinfoMachineLearning/EnQA)
+- [GCPNet](https://github.com/BioinfoMachineLearning/GCPNet)
+- [lightning-hydra-template](https://github.com/ashleve/lightning-hydra-template)
 
 We thank all their contributors and maintainers!
 

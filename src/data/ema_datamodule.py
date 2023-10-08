@@ -3,40 +3,40 @@
 # -------------------------------------------------------------------------------------------------------------------------------------
 
 import os
+from typing import Any, Dict, List, Optional
+
+import pytorch_lightning as pl
 import torch
 import torch_geometric
-import pytorch_lightning as pl
-
 from beartype import beartype
-from typing import List, Optional, Dict, Any
 
 from src.data.components.ema_dataset import EMADataset
 
 
 class EMADataModule(pl.LightningDataModule):
     def __init__(
-            self,
-            splits_dir: str = os.path.join("data", "EMA", "splits"),
-            decoy_dir: str = os.path.join("data", "EMA", "decoy_model"),
-            true_dir: str = os.path.join("data", "EMA", "true_model"),
-            model_data_cache_dir: str = os.path.join("data", "EMA", "model_data_cache"),
-            edge_cutoff: float = 4.5,
-            max_neighbors: int = 32,
-            rbf_edge_dist_cutoff: float = 4.5,
-            num_rbf: int = 16,
-            python_exec_path: Optional[str] = None,
-            lddt_exec_path: Optional[str] = None,
-            pdbtools_dir: Optional[str] = None,
-            subset_to_ca_atoms_only: bool = False,
-            batch_size: int = 1,
-            num_workers: int = 0,
-            pin_memory: bool = True,
-            # arguments for model inference
-            predict_input_dir: str = os.path.join("data", "EMA", "examples", "decoy_model"),
-            predict_true_dir: Optional[str] = os.path.join("data", "EMA", "examples", "true_model"),
-            predict_output_dir: str = os.path.join("data", "EMA", "examples", "outputs"),
-            predict_batch_size: int = 1,
-            predict_pin_memory: bool = True,
+        self,
+        splits_dir: str = os.path.join("data", "EMA", "splits"),
+        decoy_dir: str = os.path.join("data", "EMA", "decoy_model"),
+        true_dir: str = os.path.join("data", "EMA", "true_model"),
+        model_data_cache_dir: str = os.path.join("data", "EMA", "model_data_cache"),
+        edge_cutoff: float = 4.5,
+        max_neighbors: int = 32,
+        rbf_edge_dist_cutoff: float = 4.5,
+        num_rbf: int = 16,
+        python_exec_path: Optional[str] = None,
+        lddt_exec_path: Optional[str] = None,
+        pdbtools_dir: Optional[str] = None,
+        subset_to_ca_atoms_only: bool = False,
+        batch_size: int = 1,
+        num_workers: int = 0,
+        pin_memory: bool = True,
+        # arguments for model inference
+        predict_input_dir: str = os.path.join("data", "EMA", "examples", "decoy_model"),
+        predict_true_dir: Optional[str] = os.path.join("data", "EMA", "examples", "true_model"),
+        predict_output_dir: str = os.path.join("data", "EMA", "examples", "outputs"),
+        predict_batch_size: int = 1,
+        predict_pin_memory: bool = True,
     ):
         super().__init__()
 
@@ -45,36 +45,50 @@ class EMADataModule(pl.LightningDataModule):
         self.save_hyperparameters(logger=False)
 
         # features - ESM protein sequence embeddings #
-        self.esm_model, esm_alphabet = torch.hub.load("facebookresearch/esm:main", "esm2_t33_650M_UR50D")
+        self.esm_model, esm_alphabet = torch.hub.load(
+            "facebookresearch/esm:main", "esm2_t33_650M_UR50D"
+        )
         self.esm_model = self.esm_model.eval().cpu()
         self.esm_batch_converter = esm_alphabet.get_batch_converter()
 
     @staticmethod
     @beartype
     def parse_split_pdbs(
-        decoy_dir: str,
-        true_dir: str,
-        splits_dir: str,
-        split_filename: str
+        decoy_dir: str, true_dir: str, splits_dir: str, split_filename: str
     ) -> List[Dict[str, Any]]:
+        """Parse split files and return a list of dicts with decoy and true pdb paths.
+
+        :param decoy_dir: path to decoy pdbs
+        :param true_dir: path to true pdbs
+        :param splits_dir: path to split files
+        :param split_filename: split file name
+        :return: list of dicts with decoy and true pdb paths
+        """
         split_entries = []
-        with open(os.path.join(splits_dir, split_filename), "r") as f:
+        with open(os.path.join(splits_dir, split_filename)) as f:
             lines = f.readlines()
             for line in lines:
                 line = line.rstrip().split(" ")
                 target = line[0]
-                split_entries.append({
-                    "decoy_pdb": os.path.join(decoy_dir, f"{target}.pdb"),
-                    "true_pdb": os.path.join(true_dir, f"{target}.pdb")
-                })
+                split_entries.append(
+                    {
+                        "decoy_pdb": os.path.join(decoy_dir, f"{target}.pdb"),
+                        "true_pdb": os.path.join(true_dir, f"{target}.pdb"),
+                    }
+                )
         return split_entries
-    
+
     @staticmethod
     @beartype
     def parse_inference_pdbs(
-        decoy_dir: str,
-        true_dir: Optional[str] = None
+        decoy_dir: str, true_dir: Optional[str] = None
     ) -> List[Dict[str, Any]]:
+        """Parse inference pdbs and return a list of dicts with decoy and true pdb paths.
+
+        :param decoy_dir: path to decoy pdbs
+        :param true_dir: path to true pdbs
+        :return: list of dicts with decoy and true pdb paths
+        """
         split_entries = []
         for item in os.listdir(decoy_dir):
             decoy_pdb_filepath = os.path.join(decoy_dir, item)
@@ -83,34 +97,25 @@ class EMADataModule(pl.LightningDataModule):
                 if true_dir and os.path.exists(os.path.join(true_dir, item))
                 else None
             )
-            split_entries.append({
-                "decoy_pdb": decoy_pdb_filepath,
-                "true_pdb": true_pdb_filepath
-            })
+            split_entries.append({"decoy_pdb": decoy_pdb_filepath, "true_pdb": true_pdb_filepath})
         return split_entries
 
     def setup(self, stage: Optional[str] = None):
+        """Load data.
+
+        :param stage: stage of training (fit, test, predict)
+        """
         train_pdbs = self.parse_split_pdbs(
-            self.hparams.decoy_dir,
-            self.hparams.true_dir,
-            self.hparams.splits_dir,
-            "train.lst"
+            self.hparams.decoy_dir, self.hparams.true_dir, self.hparams.splits_dir, "train.lst"
         )
         valid_pdbs = self.parse_split_pdbs(
-            self.hparams.decoy_dir,
-            self.hparams.true_dir,
-            self.hparams.splits_dir,
-            "valid.lst"
+            self.hparams.decoy_dir, self.hparams.true_dir, self.hparams.splits_dir, "valid.lst"
         )
         test_pdbs = self.parse_split_pdbs(
-            self.hparams.decoy_dir,
-            self.hparams.true_dir,
-            self.hparams.splits_dir,
-            "test.lst"
+            self.hparams.decoy_dir, self.hparams.true_dir, self.hparams.splits_dir, "test.lst"
         )
         predict_pdbs = self.parse_inference_pdbs(
-            decoy_dir=self.hparams.predict_input_dir,
-            true_dir=self.hparams.predict_true_dir
+            decoy_dir=self.hparams.predict_input_dir, true_dir=self.hparams.predict_true_dir
         )
 
         if stage in ["predict"]:
@@ -180,51 +185,64 @@ class EMADataModule(pl.LightningDataModule):
         batch_size: int,
         pin_memory: bool,
         shuffle: bool,
-        drop_last: bool
+        drop_last: bool,
     ) -> torch_geometric.loader.DataLoader:
+        """Get dataloader.
+
+        :param dataset: dataset
+        :param batch_size: batch size
+        :param pin_memory: pin memory
+        :param shuffle: shuffle
+        :param drop_last: drop last
+        :return: dataloader
+        """
         return torch_geometric.loader.DataLoader(
             dataset,
             num_workers=self.hparams.num_workers,
             batch_size=batch_size,
             pin_memory=pin_memory,
             shuffle=shuffle,
-            drop_last=drop_last
+            drop_last=drop_last,
         )
 
     def train_dataloader(self):
+        """Get train dataloader."""
         return self.get_dataloader(
             self.data_train,
             batch_size=self.hparams.batch_size,
             pin_memory=self.hparams.pin_memory,
             shuffle=True,
-            drop_last=True
+            drop_last=True,
         )
 
     def val_dataloader(self):
+        """Get validation dataloader."""
         return self.get_dataloader(
             self.data_val,
             batch_size=self.hparams.batch_size,
             pin_memory=self.hparams.pin_memory,
             shuffle=False,
-            drop_last=False
+            drop_last=False,
         )
 
     def test_dataloader(self):
+        """Get test dataloader."""
         return self.get_dataloader(
             self.data_test,
             batch_size=self.hparams.batch_size,
             pin_memory=self.hparams.pin_memory,
             shuffle=False,
-            drop_last=False
+            drop_last=False,
         )
-    
+
     def predict_dataloader(self):
+        """Get predict dataloader."""
         return self.get_dataloader(
             self.data_predict,
             batch_size=self.hparams.predict_batch_size,
             pin_memory=self.hparams.predict_pin_memory,
             shuffle=False,
-            drop_last=False
+            drop_last=False,
         )
 
     def teardown(self, stage: Optional[str] = None):

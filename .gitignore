@@ -144,8 +144,9 @@ dmypy.json
 *.tar
 *.tar.gz
 
-# Lightning-Hydra-Template
+# GCPNet-EMA
 configs/local/default.yaml
+/checkpoints/structure_denoising/
 /data/
 /logs/
 .env
