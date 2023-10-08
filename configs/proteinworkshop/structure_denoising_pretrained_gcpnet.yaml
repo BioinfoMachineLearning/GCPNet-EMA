@@ -1,0 +1,23 @@
+# @package _global_
+
+# === 1. Set config parameters ===
+name: "" # default name for the experiment, "" means logger (eg. wandb) will generate a unique name
+seed: 52 # seed for random number generators in pytorch, numpy and python.random
+num_workers: 16 # number of subprocesses to use for data loading.
+ckpt_path: "checkpoints/structure_denoising_pretrained_gcpnet.ckpt" # path to checkpoint from which to load model weights
+
+# === 2. Specify defaults here. Defaults will be overwritten by equivalently named options in this file ===
+defaults:
+  - dataset: afdb_rep_v4
+  - features: ca_bb
+  - encoder: gcpnet
+  - decoder: default
+  - callbacks: default
+  - optimiser: adam
+  - scheduler: none
+  - trainer: gpu
+  - task: graph_regression
+  - finetune: default
+  - _self_ # see: https://hydra.cc/docs/upgrades/1.0_to_1.1/default_composition_order/. Adding _self_ at bottom means values in this file override defaults.
+
+task_name: "train"
