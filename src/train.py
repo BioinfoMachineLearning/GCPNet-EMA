@@ -1,8 +1,9 @@
-from typing import Any, Dict, List, Optional, Tuple
+import os
 
 import hydra
 import lightning as L
 import rootutils
+from beartype.typing import Any, Dict, List, Optional, Tuple
 from lightning import Callback, LightningDataModule, LightningModule, Trainer
 from lightning.fabric.plugins.environments.cluster_environment import ClusterEnvironment
 from lightning.pytorch.loggers import Logger
@@ -28,7 +29,10 @@ rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 # more info: https://github.com/ashleve/rootutils
 # ------------------------------------------------------------------------------------ #
 
-from src import register_custom_omegaconf_resolvers as src_register_custom_omegaconf_resolvers, resolve_omegaconf_variable
+from src import (
+    register_custom_omegaconf_resolvers as src_register_custom_omegaconf_resolvers,
+)
+from src import resolve_omegaconf_variable
 from src.utils import (
     RankedLogger,
     extras,
@@ -61,7 +65,7 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     datamodule: LightningDataModule = hydra.utils.instantiate(cfg.data)
 
     log.info(f"Instantiating model <{cfg.model._target_}>")
-    model: LightningModule = hydra.utils.instantiate(cfg.model)
+    model: LightningModule = hydra.utils.instantiate(cfg.model, path_cfg=cfg.paths)
 
     log.info("Instantiating callbacks...")
     callbacks: List[Callback] = instantiate_callbacks(cfg.get("callbacks"))
@@ -128,7 +132,14 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
     if cfg.get("train"):
         log.info("Starting training!")
-        trainer.fit(model=model, datamodule=datamodule, ckpt_path=cfg.get("ckpt_path"))
+        ckpt_path = None
+        if cfg.get("ckpt_path") and os.path.exists(cfg.get("ckpt_path")):
+            ckpt_path = cfg.get("ckpt_path")
+        elif cfg.get("ckpt_path"):
+            log.warning(
+                "`ckpt_path` was given, but the path does not exist. Training with new model weights."
+            )
+        trainer.fit(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
 
     train_metrics = trainer.callback_metrics
 

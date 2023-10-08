@@ -2,10 +2,9 @@
 # Following code curated for GCPNet-EMA (https://github.com/BioinfoMachineLearning/GCPNet-EMA):
 # -------------------------------------------------------------------------------------------------------------------------------------
 
-from typing import Union
-
 import torch
 from beartype import beartype
+from beartype.typing import Union
 from jaxtyping import Float
 from torch.nn import functional as F
 

@@ -3,18 +3,18 @@
 # -------------------------------------------------------------------------------------------------------------------------------------
 
 import os
-from typing import Any, Dict, List, Optional
 
-import pytorch_lightning as pl
 import torch
 import torch_geometric
 from beartype import beartype
+from beartype.typing import Any, Dict, List, Optional
+from lightning import LightningDataModule
 from torch.utils.data import Dataset
 
 from src.data.components.ema_dataset import EMADataset
 
 
-class EMADataModule(pl.LightningDataModule):
+class EMADataModule(LightningDataModule):
     def __init__(
         self,
         splits_dir: str = os.path.join("data", "EMA", "splits"),
@@ -39,6 +39,7 @@ class EMADataModule(pl.LightningDataModule):
         predict_batch_size: int = 1,
         predict_pin_memory: bool = True,
     ):
+        """EMA data module."""
         super().__init__()
 
         # this line allows to access init params with `self.hparams` attribute
@@ -52,11 +53,12 @@ class EMADataModule(pl.LightningDataModule):
         self.esm_model = self.esm_model.eval().cpu()
         self.esm_batch_converter = esm_alphabet.get_batch_converter()
 
-        # initialize datasets
         self.data_train: Optional[Dataset] = None
         self.data_val: Optional[Dataset] = None
         self.data_test: Optional[Dataset] = None
         self.data_predict: Optional[Dataset] = None
+
+        self.batch_size_per_device = batch_size
 
     @staticmethod
     @beartype
@@ -112,6 +114,14 @@ class EMADataModule(pl.LightningDataModule):
 
         :param stage: stage of training (fit, test, predict)
         """
+        if self.trainer is not None:
+            # divide batch size by the number of devices
+            if self.hparams.batch_size % self.trainer.world_size != 0:
+                raise RuntimeError(
+                    f"Batch size ({self.hparams.batch_size}) is not divisible by the number of devices ({self.trainer.world_size})."
+                )
+            self.batch_size_per_device = self.hparams.batch_size // self.trainer.world_size
+
         if stage and stage == "fit" and (not self.data_train or not self.data_val):
             train_pdbs = self.parse_split_pdbs(
                 self.hparams.decoy_dir, self.hparams.true_dir, self.hparams.splits_dir, "train.lst"
@@ -219,7 +229,7 @@ class EMADataModule(pl.LightningDataModule):
         """Get train dataloader."""
         return self.get_dataloader(
             self.data_train,
-            batch_size=self.hparams.batch_size,
+            batch_size=self.batch_size_per_device,
             pin_memory=self.hparams.pin_memory,
             shuffle=True,
             drop_last=True,
@@ -229,7 +239,7 @@ class EMADataModule(pl.LightningDataModule):
         """Get validation dataloader."""
         return self.get_dataloader(
             self.data_val,
-            batch_size=self.hparams.batch_size,
+            batch_size=self.batch_size_per_device,
             pin_memory=self.hparams.pin_memory,
             shuffle=False,
             drop_last=False,
@@ -239,7 +249,7 @@ class EMADataModule(pl.LightningDataModule):
         """Get test dataloader."""
         return self.get_dataloader(
             self.data_test,
-            batch_size=self.hparams.batch_size,
+            batch_size=self.batch_size_per_device,
             pin_memory=self.hparams.pin_memory,
             shuffle=False,
             drop_last=False,
@@ -249,7 +259,7 @@ class EMADataModule(pl.LightningDataModule):
         """Get predict dataloader."""
         return self.get_dataloader(
             self.data_predict,
-            batch_size=self.hparams.predict_batch_size,
+            batch_size=self.batch_size_per_device,
             pin_memory=self.hparams.predict_pin_memory,
             shuffle=False,
             drop_last=False,

@@ -2,7 +2,7 @@
 
 defaults:
   - _self_
-  - data: ema # choose datamodule with `test_dataloader()` for evaluation
+  - data: ema # choose datamodule with `predict_dataloader()` for prediction
   - model: gcpnet_ema
   - logger: null
   - strategy: default
@@ -12,11 +12,11 @@ defaults:
   - hydra: default
   - environment: default
 
-task_name: "eval"
+task_name: "predict"
 
 tags: ["dev"]
 
-# passing checkpoint path is necessary for evaluation
+# passing checkpoint path is necessary for prediction
 ckpt_path: ???
 
 # seed for random number generators in pytorch, numpy and python.random

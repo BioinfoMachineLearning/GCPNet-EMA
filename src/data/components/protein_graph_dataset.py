@@ -4,12 +4,12 @@
 
 
 import math
-from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 import torch
 import torch_cluster
 from beartype import beartype
+from beartype.typing import Any, Dict, List, Optional, Union
 from jaxtyping import Float, Int64
 from omegaconf import DictConfig
 from torch.nn import functional as F

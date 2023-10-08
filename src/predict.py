@@ -42,8 +42,8 @@ log = RankedLogger(__name__, rank_zero_only=True)
 
 
 @task_wrapper
-def evaluate(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-    """Evaluates given checkpoint on a datamodule testset.
+def predict(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """Predicts with given checkpoint on a datamodule predictset.
 
     This method is wrapped in optional @task_wrapper decorator, that controls the behavior during
     failure. Useful for multiruns, saving info about the crash, etc.
@@ -121,17 +121,18 @@ def evaluate(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         checkpoint_path=cfg.ckpt_path, strict=True, path_cfg=hydra.utils.instantiate(cfg.paths)
     )
 
-    log.info("Starting testing!")
-    trainer.test(model=model, datamodule=datamodule)
+    log.info("Starting predictions!")
+    trainer.predict(model=model, datamodule=datamodule)
+    log.info(f"Predictions saved to: {trainer.model.predictions_csv_path}")
 
     metric_dict = trainer.callback_metrics
 
     return metric_dict, object_dict
 
 
-@hydra.main(version_base="1.3", config_path="../configs", config_name="eval.yaml")
+@hydra.main(version_base="1.3", config_path="../configs", config_name="predict.yaml")
 def main(cfg: DictConfig) -> None:
-    """Main entry point for evaluation.
+    """Main entry point for prediction.
 
     :param cfg: DictConfig configuration composed by Hydra.
     """
@@ -139,7 +140,7 @@ def main(cfg: DictConfig) -> None:
     # (e.g. ask for tags if none are provided in cfg, print cfg tree, etc.)
     extras(cfg)
 
-    evaluate(cfg)
+    predict(cfg)
 
 
 if __name__ == "__main__":

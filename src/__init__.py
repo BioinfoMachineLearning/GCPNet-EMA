@@ -1,6 +1,6 @@
 import importlib
-from typing import Any
 
+from beartype.typing import Any
 from omegaconf import OmegaConf
 
 

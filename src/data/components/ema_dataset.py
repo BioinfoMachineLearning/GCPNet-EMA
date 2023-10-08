@@ -8,7 +8,6 @@ import subprocess  # nosec
 import tempfile
 from io import StringIO
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -17,6 +16,7 @@ import torch
 import torch.nn as nn
 import torch_cluster
 from beartype import beartype
+from beartype.typing import Any, Dict, List, Optional, Tuple, Union
 from biopandas.pdb import PandasPdb
 from jaxtyping import Float, Int64, jaxtyped
 from sidechainnet.structure.build_info import NUM_COORDS_PER_RES
@@ -302,6 +302,7 @@ class EMADataset(Dataset):
         pdbtools_dir: Optional[str] = None,
         subset_to_ca_atoms_only: bool = False,
     ):
+        """Initializes a dataset of PDBs."""
         self.decoy_pdbs = decoy_pdbs
         self.model_data_cache_dir = model_data_cache_dir
         self.edge_cutoff = edge_cutoff
