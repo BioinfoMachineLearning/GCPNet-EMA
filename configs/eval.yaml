@@ -2,8 +2,8 @@
 
 defaults:
   - _self_
-  - data: mnist # choose datamodule with `test_dataloader()` for evaluation
-  - model: mnist
+  - data: ema # choose datamodule with `test_dataloader()` for evaluation
+  - model: gcpnet_ema
   - logger: null
   - strategy: default
   - trainer: default

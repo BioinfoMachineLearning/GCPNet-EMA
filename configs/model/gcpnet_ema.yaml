@@ -1,4 +1,4 @@
-_target_: src.models.mnist_module.MNISTLitModule
+_target_: src.models.gcpnet_ema_module.GCPNetEMALitModule
 
 optimizer:
   _target_: torch.optim.Adam
