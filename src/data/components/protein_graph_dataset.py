@@ -2,9 +2,9 @@
 # Following code curated for GCPNet-EMA (https://github.com/BioinfoMachineLearning/GCPNet-EMA):
 # -------------------------------------------------------------------------------------------------------------------------------------
 
-from __future__ import print_function, absolute_import, division
 
 import math
+from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 import torch
@@ -15,7 +15,6 @@ from omegaconf import DictConfig
 from torch.nn import functional as F
 from torch.utils import data as data
 from torch_geometric.data import Data
-from typing import Any, Dict, List, Optional, Union
 
 from src.data.components.helper import _normalize, _rbf
 
@@ -25,15 +24,16 @@ class ProteinGraphDataset(data.Dataset):
     From https://github.com/drorlab/gvp-pytorch
     """
 
-    def __init__(self,
-                 data_list: List[Dict[str, Any]],
-                 features_cfg: DictConfig,
-                 num_positional_embeddings: int = 16,
-                 top_k: int = 30,
-                 num_rbf: int = 16,
-                 device: Union[torch.device, str] = "cpu"):
-
-        super(ProteinGraphDataset, self).__init__()
+    def __init__(
+        self,
+        data_list: List[Dict[str, Any]],
+        features_cfg: DictConfig,
+        num_positional_embeddings: int = 16,
+        top_k: int = 30,
+        num_rbf: int = 16,
+        device: Union[torch.device, str] = "cpu",
+    ):
+        super().__init__()
 
         self.features_cfg = features_cfg
         self.data_list = data_list
@@ -73,6 +73,10 @@ class ProteinGraphDataset(data.Dataset):
 
     @beartype
     def num_to_letter(self) -> List[str]:
+        """Get the list of amino acid letters.
+
+        :return: List of amino acid letters.
+        """
         letter_to_num = {
             "C": 4,
             "D": 3,
@@ -101,27 +105,44 @@ class ProteinGraphDataset(data.Dataset):
         return num_to_letter_list
 
     def __len__(self):
+        """Get the number of proteins in the dataset.
+
+        :return: Number of proteins in the dataset.
+        """
         return len(self.data_list)
 
     def __getitem__(self, idx: int):
+        """Get the protein at index `idx` in the dataset.
+
+        :param idx: Index of the protein to get.
+        """
         return self._featurize_as_graph(self.data_list[idx])
 
     @beartype
     def _featurize_as_graph(self, protein: Dict[str, Any]) -> Data:
+        """Featurize a protein as a graph.
+
+        :param protein: Protein to featurize.
+        :return: Featurized protein.
+        """
         if "name" not in protein:
             name = protein["id"]
         else:
             name = protein["name"]
         with torch.no_grad():
             coords = torch.as_tensor(protein["coords"], device=self.device, dtype=torch.float32)
-            seq = torch.as_tensor([self.letter_to_num[a] for a in protein["seq"]], device=self.device, dtype=torch.long)
+            seq = torch.as_tensor(
+                [self.letter_to_num[a] for a in protein["seq"]],
+                device=self.device,
+                dtype=torch.long,
+            )
 
             mask = torch.isfinite(coords.sum(dim=(1, 2)))
             coords[~mask] = np.inf  # ensure missing nodes are assigned no edges
 
             X_ca = coords[:, 1]
             edge_index = torch_cluster.knn_graph(X_ca, k=self.top_k)
-            
+
             pos_embeddings = self._positional_embeddings(edge_index)
             E_vectors = X_ca[edge_index[0]] - X_ca[edge_index[1]]
             rbf = _rbf(E_vectors.norm(dim=-1), D_count=self.num_rbf, device=self.device)
@@ -148,7 +169,9 @@ class ProteinGraphDataset(data.Dataset):
             edge_s = torch.cat((rbf, pos_embeddings), dim=-1)
             edge_v = _normalize(E_vectors).unsqueeze(-2)
 
-            node_s, node_v, edge_s, edge_v = map(torch.nan_to_num, (node_s, node_v, edge_s, edge_v))
+            node_s, node_v, edge_s, edge_v = map(
+                torch.nan_to_num, (node_s, node_v, edge_s, edge_v)
+            )
 
         data = Data(
             x=X_ca,
@@ -159,15 +182,21 @@ class ProteinGraphDataset(data.Dataset):
             e=edge_s,
             xi=edge_v,
             edge_index=edge_index,
-            mask=mask
+            mask=mask,
         )
         return data
 
     @staticmethod
     def _dihedrals(
-        X: Float[torch.Tensor, "num_residues num_atoms_per_residue 3"],
-        eps: float = 1e-7
-    ) -> Float[torch.Tensor, "num_residues 6"]:
+        X: Float[torch.Tensor, "num_residues num_atoms_per_residue 3"],  # noqa: F722
+        eps: float = 1e-7,
+    ) -> Float[torch.Tensor, "num_residues 6"]:  # noqa: F722
+        """Get the dihedral angles of a protein.
+
+        :param X: `torch.Tensor` of node coordinates.
+        :param eps: Epsilon value for numerical stability.
+        :return: `torch.Tensor` of dihedral angles.
+        """
         # From https://github.com/jingraham/neurips19-graph-protein-design
         X = torch.reshape(X[:, :3], [3 * X.shape[0], 3])
         dX = X[1:] - X[:-1]
@@ -196,9 +225,15 @@ class ProteinGraphDataset(data.Dataset):
     @beartype
     def _positional_embeddings(
         self,
-        edge_index: Int64[torch.Tensor, "2 num_edges"],
-        num_embeddings: Optional[int] = None
-    ) -> Float[torch.Tensor, "num_edges num_embeddings_per_edge"]:
+        edge_index: Int64[torch.Tensor, "2 num_edges"],  # noqa: F722
+        num_embeddings: Optional[int] = None,
+    ) -> Float[torch.Tensor, "num_edges num_embeddings_per_edge"]:  # noqa: F722
+        """Get the positional embeddings of a protein.
+
+        :param edge_index: `torch.Tensor` of edge indices.
+        :param num_embeddings: Number of positional embeddings to use.
+        :return: `torch.Tensor` of positional embeddings.
+        """
         # From https://github.com/jingraham/neurips19-graph-protein-design
         num_embeddings = num_embeddings or self.num_positional_embeddings
         d = edge_index[0] - edge_index[1]
@@ -213,8 +248,13 @@ class ProteinGraphDataset(data.Dataset):
 
     @staticmethod
     def _orientations(
-        X: Float[torch.Tensor, "num_nodes 3"]
-    ) -> Float[torch.Tensor, "num_nodes 2 3"]:
+        X: Float[torch.Tensor, "num_nodes 3"]  # noqa: F722
+    ) -> Float[torch.Tensor, "num_nodes 2 3"]:  # noqa: F722
+        """Get the orientations of edges in a graph.
+
+        :param X: `torch.Tensor` of node coordinates.
+        :return: `torch.Tensor` of edge orientations.
+        """
         forward = _normalize(X[1:] - X[:-1])
         backward = _normalize(X[:-1] - X[1:])
         forward = F.pad(forward, [0, 0, 0, 1])
@@ -223,8 +263,13 @@ class ProteinGraphDataset(data.Dataset):
 
     @staticmethod
     def _sidechains(
-        X: Float[torch.Tensor, "num_residues num_atoms_per_residue 3"]
-    ) -> Float[torch.Tensor, "num_residues 3"]:
+        X: Float[torch.Tensor, "num_residues num_atoms_per_residue 3"]  # noqa: F722
+    ) -> Float[torch.Tensor, "num_residues 3"]:  # noqa: F722
+        """Get the sidechain vectors of a protein.
+
+        :param X: `torch.Tensor` of node coordinates.
+        :return: `torch.Tensor` of sidechain vectors.
+        """
         n, origin, c = X[:, 0], X[:, 1], X[:, 2]
         c, n = _normalize(c - origin), _normalize(n - origin)
         bisector = _normalize(c + n)
