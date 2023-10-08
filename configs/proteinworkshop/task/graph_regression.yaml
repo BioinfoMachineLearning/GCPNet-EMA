@@ -1,0 +1,28 @@
+# @package _global_
+
+defaults:
+  - override /decoder:
+      - graph_label
+
+callbacks:
+  early_stopping:
+    monitor: val/graph_label/rmse
+    mode: "min"
+  model_checkpoint:
+    monitor: val/graph_label/rmse
+    mode: "min"
+
+metrics:
+  rmse:
+    _target_: torchmetrics.MeanSquaredError
+    squared: False
+
+task:
+  task: "regression"
+  losses:
+    graph_label: mse_loss
+  label_smoothing: 0.0
+  output:
+    - graph_label
+  supervise_on:
+    - graph_label

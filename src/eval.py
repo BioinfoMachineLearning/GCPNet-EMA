@@ -7,6 +7,7 @@ from lightning.fabric.plugins.environments.cluster_environment import ClusterEnv
 from lightning.pytorch.loggers import Logger
 from lightning.pytorch.strategies.strategy import Strategy
 from omegaconf import DictConfig
+from proteinworkshop import register_custom_omegaconf_resolvers
 
 rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 # ------------------------------------------------------------------------------------ #
@@ -26,7 +27,7 @@ rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 # more info: https://github.com/ashleve/rootutils
 # ------------------------------------------------------------------------------------ #
 
-from src import register_custom_omegaconf_resolvers, resolve_omegaconf_variable
+from src import register_custom_omegaconf_resolvers as src_register_custom_omegaconf_resolvers, resolve_omegaconf_variable
 from src.utils import (
     RankedLogger,
     extras,
@@ -139,4 +140,5 @@ def main(cfg: DictConfig) -> None:
 
 if __name__ == "__main__":
     register_custom_omegaconf_resolvers()
+    src_register_custom_omegaconf_resolvers()
     main()
