@@ -9,6 +9,7 @@ import pytorch_lightning as pl
 import torch
 import torch_geometric
 from beartype import beartype
+from torch.utils.data import Dataset
 
 from src.data.components.ema_dataset import EMADataset
 
@@ -50,6 +51,12 @@ class EMADataModule(pl.LightningDataModule):
         )
         self.esm_model = self.esm_model.eval().cpu()
         self.esm_batch_converter = esm_alphabet.get_batch_converter()
+
+        # initialize datasets
+        self.data_train: Optional[Dataset] = None
+        self.data_val: Optional[Dataset] = None
+        self.data_test: Optional[Dataset] = None
+        self.data_predict: Optional[Dataset] = None
 
     @staticmethod
     @beartype
@@ -105,78 +112,81 @@ class EMADataModule(pl.LightningDataModule):
 
         :param stage: stage of training (fit, test, predict)
         """
-        train_pdbs = self.parse_split_pdbs(
-            self.hparams.decoy_dir, self.hparams.true_dir, self.hparams.splits_dir, "train.lst"
-        )
-        valid_pdbs = self.parse_split_pdbs(
-            self.hparams.decoy_dir, self.hparams.true_dir, self.hparams.splits_dir, "valid.lst"
-        )
-        test_pdbs = self.parse_split_pdbs(
-            self.hparams.decoy_dir, self.hparams.true_dir, self.hparams.splits_dir, "test.lst"
-        )
-        predict_pdbs = self.parse_inference_pdbs(
-            decoy_dir=self.hparams.predict_input_dir, true_dir=self.hparams.predict_true_dir
-        )
+        if stage and stage == "fit" and (not self.data_train or not self.data_val):
+            train_pdbs = self.parse_split_pdbs(
+                self.hparams.decoy_dir, self.hparams.true_dir, self.hparams.splits_dir, "train.lst"
+            )
+            valid_pdbs = self.parse_split_pdbs(
+                self.hparams.decoy_dir, self.hparams.true_dir, self.hparams.splits_dir, "valid.lst"
+            )
+            self.data_train = EMADataset(
+                decoy_pdbs=train_pdbs,
+                model_data_cache_dir=self.hparams.model_data_cache_dir,
+                edge_cutoff=self.hparams.edge_cutoff,
+                max_neighbors=self.hparams.max_neighbors,
+                rbf_edge_dist_cutoff=self.hparams.rbf_edge_dist_cutoff,
+                num_rbf=self.hparams.num_rbf,
+                esm_model=getattr(self, "esm_model", None),
+                esm_batch_converter=getattr(self, "esm_batch_converter", None),
+                python_exec_path=self.hparams.python_exec_path,
+                lddt_exec_path=self.hparams.lddt_exec_path,
+                pdbtools_dir=self.hparams.pdbtools_dir,
+                subset_to_ca_atoms_only=self.hparams.subset_to_ca_atoms_only,
+            )
+            self.data_val = EMADataset(
+                decoy_pdbs=valid_pdbs,
+                model_data_cache_dir=self.hparams.model_data_cache_dir,
+                edge_cutoff=self.hparams.edge_cutoff,
+                max_neighbors=self.hparams.max_neighbors,
+                rbf_edge_dist_cutoff=self.hparams.rbf_edge_dist_cutoff,
+                num_rbf=self.hparams.num_rbf,
+                esm_model=getattr(self, "esm_model", None),
+                esm_batch_converter=getattr(self, "esm_batch_converter", None),
+                python_exec_path=self.hparams.python_exec_path,
+                lddt_exec_path=self.hparams.lddt_exec_path,
+                pdbtools_dir=self.hparams.pdbtools_dir,
+                subset_to_ca_atoms_only=self.hparams.subset_to_ca_atoms_only,
+            )
 
-        if stage in ["predict"]:
-            assert len(predict_pdbs) > 0, "PDB inputs must be provided during model inference."
+        if stage and stage == "test" and not self.data_test:
+            test_pdbs = self.parse_split_pdbs(
+                self.hparams.decoy_dir, self.hparams.true_dir, self.hparams.splits_dir, "test.lst"
+            )
+            self.data_test = EMADataset(
+                decoy_pdbs=test_pdbs,
+                model_data_cache_dir=self.hparams.model_data_cache_dir,
+                edge_cutoff=self.hparams.edge_cutoff,
+                max_neighbors=self.hparams.max_neighbors,
+                rbf_edge_dist_cutoff=self.hparams.rbf_edge_dist_cutoff,
+                num_rbf=self.hparams.num_rbf,
+                esm_model=getattr(self, "esm_model", None),
+                esm_batch_converter=getattr(self, "esm_batch_converter", None),
+                python_exec_path=self.hparams.python_exec_path,
+                lddt_exec_path=self.hparams.lddt_exec_path,
+                pdbtools_dir=self.hparams.pdbtools_dir,
+                subset_to_ca_atoms_only=self.hparams.subset_to_ca_atoms_only,
+            )
 
-        self.data_train = EMADataset(
-            decoy_pdbs=train_pdbs,
-            model_data_cache_dir=self.hparams.model_data_cache_dir,
-            edge_cutoff=self.hparams.edge_cutoff,
-            max_neighbors=self.hparams.max_neighbors,
-            rbf_edge_dist_cutoff=self.hparams.rbf_edge_dist_cutoff,
-            num_rbf=self.hparams.num_rbf,
-            esm_model=getattr(self, "esm_model", None),
-            esm_batch_converter=getattr(self, "esm_batch_converter", None),
-            python_exec_path=self.hparams.python_exec_path,
-            lddt_exec_path=self.hparams.lddt_exec_path,
-            pdbtools_dir=self.hparams.pdbtools_dir,
-            subset_to_ca_atoms_only=self.hparams.subset_to_ca_atoms_only,
-        )
-        self.data_val = EMADataset(
-            decoy_pdbs=valid_pdbs,
-            model_data_cache_dir=self.hparams.model_data_cache_dir,
-            edge_cutoff=self.hparams.edge_cutoff,
-            max_neighbors=self.hparams.max_neighbors,
-            rbf_edge_dist_cutoff=self.hparams.rbf_edge_dist_cutoff,
-            num_rbf=self.hparams.num_rbf,
-            esm_model=getattr(self, "esm_model", None),
-            esm_batch_converter=getattr(self, "esm_batch_converter", None),
-            python_exec_path=self.hparams.python_exec_path,
-            lddt_exec_path=self.hparams.lddt_exec_path,
-            pdbtools_dir=self.hparams.pdbtools_dir,
-            subset_to_ca_atoms_only=self.hparams.subset_to_ca_atoms_only,
-        )
-        self.data_test = EMADataset(
-            decoy_pdbs=test_pdbs,
-            model_data_cache_dir=self.hparams.model_data_cache_dir,
-            edge_cutoff=self.hparams.edge_cutoff,
-            max_neighbors=self.hparams.max_neighbors,
-            rbf_edge_dist_cutoff=self.hparams.rbf_edge_dist_cutoff,
-            num_rbf=self.hparams.num_rbf,
-            esm_model=getattr(self, "esm_model", None),
-            esm_batch_converter=getattr(self, "esm_batch_converter", None),
-            python_exec_path=self.hparams.python_exec_path,
-            lddt_exec_path=self.hparams.lddt_exec_path,
-            pdbtools_dir=self.hparams.pdbtools_dir,
-            subset_to_ca_atoms_only=self.hparams.subset_to_ca_atoms_only,
-        )
-        self.data_predict = EMADataset(
-            decoy_pdbs=predict_pdbs,
-            model_data_cache_dir=self.hparams.predict_output_dir,
-            edge_cutoff=self.hparams.edge_cutoff,
-            max_neighbors=self.hparams.max_neighbors,
-            rbf_edge_dist_cutoff=self.hparams.rbf_edge_dist_cutoff,
-            num_rbf=self.hparams.num_rbf,
-            esm_model=getattr(self, "esm_model", None),
-            esm_batch_converter=getattr(self, "esm_batch_converter", None),
-            python_exec_path=self.hparams.python_exec_path,
-            lddt_exec_path=self.hparams.lddt_exec_path,
-            pdbtools_dir=self.hparams.pdbtools_dir,
-            subset_to_ca_atoms_only=self.hparams.subset_to_ca_atoms_only,
-        )
+        if stage and stage == "predict":
+            predict_pdbs = self.parse_inference_pdbs(
+                decoy_dir=self.hparams.predict_input_dir, true_dir=self.hparams.predict_true_dir
+            )
+            if len(predict_pdbs) == 0:
+                raise Exception("PDB inputs must be provided during model inference.")
+            self.data_predict = EMADataset(
+                decoy_pdbs=predict_pdbs,
+                model_data_cache_dir=self.hparams.predict_output_dir,
+                edge_cutoff=self.hparams.edge_cutoff,
+                max_neighbors=self.hparams.max_neighbors,
+                rbf_edge_dist_cutoff=self.hparams.rbf_edge_dist_cutoff,
+                num_rbf=self.hparams.num_rbf,
+                esm_model=getattr(self, "esm_model", None),
+                esm_batch_converter=getattr(self, "esm_batch_converter", None),
+                python_exec_path=self.hparams.python_exec_path,
+                lddt_exec_path=self.hparams.lddt_exec_path,
+                pdbtools_dir=self.hparams.pdbtools_dir,
+                subset_to_ca_atoms_only=self.hparams.subset_to_ca_atoms_only,
+            )
 
     @beartype
     def get_dataloader(

@@ -16,3 +16,10 @@ output_dir: ${hydra:runtime.output_dir}
 
 # path to working directory
 work_dir: ${hydra:runtime.cwd}
+
+# path to grid search script directory
+grid_search_script_dir:
+
+# paths to local executables
+tmscore_exec_path: ~/Programs/TMscore # note: must be an absolute path during runtime
+lddt_exec_path: ~/mambaforge/envs/GCPNet-EMA/bin/lddt # note: must be an absolute path during runtime

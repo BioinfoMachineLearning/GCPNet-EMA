@@ -18,7 +18,7 @@ import torch.nn as nn
 import torch_cluster
 from beartype import beartype
 from biopandas.pdb import PandasPdb
-from jaxtyping import Float, Int64
+from jaxtyping import Float, Int64, jaxtyped
 from sidechainnet.structure.build_info import NUM_COORDS_PER_RES
 from sidechainnet.utils.measure import get_seq_coords_and_angles
 from torch.utils.data import Dataset
@@ -26,12 +26,12 @@ from torch_geometric.data import Data
 
 from src.data.components.helper import _normalize, _rbf
 from src.data.components.protein_graph_dataset import ProteinGraphDataset
-from src.utils.pylogger import get_pylogger
+from src.utils import RankedLogger
 
 pr.confProDy(verbosity="none")
 
 
-log = get_pylogger(__name__)
+log = RankedLogger(__name__, rank_zero_only=False)
 
 
 ALPHABET = [
@@ -147,6 +147,7 @@ NUM_COORDINATES_PER_RESIDUE = NUM_COORDS_PER_RES
 MAX_PLDDT_VALUE = 100
 
 
+@jaxtyped
 @beartype
 def _edge_features(
     coords: Float[torch.Tensor, "num_nodes 3"],  # noqa: F722
@@ -157,7 +158,7 @@ def _edge_features(
     device: Union[torch.device, str] = "cpu",
 ) -> Tuple[
     Float[torch.Tensor, "num_edges num_cat_edge_scalar_features"],  # noqa: F722
-    Float[torch.Tensor, "num_edges num_edge_vector_features", 3],  # noqa: F722
+    Float[torch.Tensor, "num_edges num_edge_vector_features 3"],  # noqa: F722
 ]:
     """Builds edge features for a geometric graph.
 
@@ -180,6 +181,7 @@ def _edge_features(
     return edge_s, edge_v
 
 
+@jaxtyped
 @beartype
 def _node_features(
     coords: Float[torch.Tensor, "num_nodes 3"]  # noqa: F722
