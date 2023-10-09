@@ -19,9 +19,7 @@ from beartype import beartype
 from beartype.typing import Any, Dict, List, Optional, Tuple
 from lightning import LightningModule
 from omegaconf import DictConfig
-from proteinworkshop.configs.config import validate_config
 from proteinworkshop.datasets.utils import create_example_batch
-from proteinworkshop.models.base import BenchMarkModel
 from torch_scatter import scatter
 
 from src.data.components.ema_dataset import MAX_PLDDT_VALUE
@@ -68,6 +66,7 @@ class GCPNetEMALitModule(LightningModule):
         self,
         optimizer: torch.optim.Optimizer,
         scheduler: torch.optim.lr_scheduler,
+        model: LightningModule,
         compile: bool,
         model_cfg: DictConfig,
         path_cfg: DictConfig = None,
@@ -77,6 +76,7 @@ class GCPNetEMALitModule(LightningModule):
 
         :param optimizer: An optimizer instance.
         :param scheduler: A scheduler instance.
+        :param model: A `ProteinWorkshop` `LightningModule` instance.
         :param compile: Whether to compile the model.
         :param model_cfg: A `ProteinWorkshop` model checkpoint `DictConfig` containing values for the following keys.
             - `ckpt_path`: Path to the `ProteinWorkshop` model checkpoint.
@@ -108,10 +108,8 @@ class GCPNetEMALitModule(LightningModule):
         # also ensures init params will be stored in ckpt
         self.save_hyperparameters(logger=False)
 
-        # `ProteinWorkshop` encoder-decoder model weights #
-        validate_config(model_cfg)
-
-        self.model: LightningModule = BenchMarkModel(model_cfg)
+        # A `ProteinWorkshop` `LightningModule` #
+        self.model = model
 
         # Initialize lazy layers for parameter counts.
         # This is also required for the `BenchMarkModel` model to be able to load weights.

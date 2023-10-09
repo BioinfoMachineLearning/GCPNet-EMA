@@ -17,7 +17,7 @@ features:
 task:
   task: "regression"
   losses:
-    graph_regression: l1_loss
+    graph_label: l1_loss
   label_smoothing: 0.0
   output:
     - graph_regression

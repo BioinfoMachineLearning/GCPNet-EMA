@@ -8,8 +8,10 @@ from lightning import Callback, LightningDataModule, LightningModule, Trainer
 from lightning.fabric.plugins.environments.cluster_environment import ClusterEnvironment
 from lightning.pytorch.loggers import Logger
 from lightning.pytorch.strategies.strategy import Strategy
-from omegaconf import DictConfig
+from omegaconf import DictConfig, open_dict
 from proteinworkshop import register_custom_omegaconf_resolvers
+from proteinworkshop.configs.config import validate_config
+from proteinworkshop.models.base import BenchMarkModel
 
 rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 # ------------------------------------------------------------------------------------ #
@@ -65,7 +67,14 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     datamodule: LightningDataModule = hydra.utils.instantiate(cfg.data)
 
     log.info(f"Instantiating model <{cfg.model._target_}>")
-    model: LightningModule = hydra.utils.instantiate(cfg.model, path_cfg=cfg.paths)
+    with open_dict(cfg):
+        cfg.model.model_cfg = validate_config(cfg.model.model_cfg)
+    benchmark_model = BenchMarkModel(cfg.model.model_cfg)
+    model: LightningModule = hydra.utils.instantiate(
+        cfg.model,
+        model=benchmark_model,
+        path_cfg=cfg.paths,
+    )
 
     log.info("Instantiating callbacks...")
     callbacks: List[Callback] = instantiate_callbacks(cfg.get("callbacks"))
