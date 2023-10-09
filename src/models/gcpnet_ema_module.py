@@ -240,6 +240,7 @@ class GCPNetEMALitModule(LightningModule):
                     f"Ran out of memory in the forward pass. Skipping current training batch with index {batch_idx}"
                 )
                 if not torch_dist.is_initialized():
+                    # NOTE: for skipping batches in a single-device setting
                     for p in self.net.parameters():
                         if p.grad is not None:
                             del p.grad  # free some memory
@@ -318,6 +319,7 @@ class GCPNetEMALitModule(LightningModule):
                     f"Ran out of memory in the forward pass. Skipping current validation batch with index {batch_idx}"
                 )
                 if not torch_dist.is_initialized():
+                    # NOTE: for skipping batches in a single-device setting
                     for p in self.net.parameters():
                         if p.grad is not None:
                             del p.grad  # free some memory
@@ -639,6 +641,7 @@ class GCPNetEMALitModule(LightningModule):
             if "out of memory" in str(e):
                 log.warning(f"Ran out of memory in the backward pass. Skipping batch due to: {e}")
                 if not torch_dist.is_initialized():
+                    # NOTE: for skipping batches in a single-device setting
                     for p in self.net.parameters():
                         if p.grad is not None:
                             del p.grad  # free some memory
