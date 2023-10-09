@@ -15,3 +15,7 @@ scheduler:
 
 # compile model for faster training with PyTorch 2.0
 compile: false
+
+# `ProteinWorkshop` encoder-decoder model config
+defaults:
+  - model_cfg: structure_denoising_pretrained_gcpnet.yaml

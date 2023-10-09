@@ -24,14 +24,10 @@ trainer:
 model:
   optimizer:
     lr: 0.002
-  net:
-    lin1_size: 128
-    lin2_size: 256
-    lin3_size: 64
   compile: false
 
 data:
-  batch_size: 64
+  batch_size: 32
 
 logger:
   wandb:

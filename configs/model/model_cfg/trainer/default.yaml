@@ -1,6 +1,6 @@
 _target_: lightning.pytorch.trainer.Trainer
 
-default_root_dir: ${hydra.runtime.output_dir}
+default_root_dir: hydra_out_dir
 
 min_epochs: 1 # prevents early stopping
 max_epochs: 10

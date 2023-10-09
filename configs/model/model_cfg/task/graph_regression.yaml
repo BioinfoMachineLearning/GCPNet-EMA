@@ -1,0 +1,33 @@
+callbacks:
+  early_stopping:
+    monitor: val/graph_label/rmse
+    mode: "min"
+  model_checkpoint:
+    monitor: val/graph_label/rmse
+    mode: "min"
+
+decoder:
+  graph_regression:
+    _target_: "proteinworkshop.models.decoders.mlp_decoder.MLPDecoder"
+    hidden_dim: [512, 512, 512]
+    dropout: 0.0 # dropout rate
+    activations: ["relu", "relu", "relu", "none"]
+    skip: "concat" # Or sum/False
+    out_dim: 1
+    input: "graph_embedding"
+
+metrics:
+  rmse:
+    _target_: torchmetrics.MeanSquaredError
+    squared: False
+
+task: "regression"
+losses:
+  graph_regression: l1_loss
+label_smoothing: 0.0
+output:
+  - graph_label
+supervise_on:
+  - graph_label
+
+transforms: null

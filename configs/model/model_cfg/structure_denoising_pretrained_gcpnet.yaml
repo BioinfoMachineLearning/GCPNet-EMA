@@ -1,5 +1,3 @@
-# @package _global_
-
 # === 1. Set config parameters ===
 name: "" # default name for the experiment, "" means logger (eg. wandb) will generate a unique name
 seed: 52 # seed for random number generators in pytorch, numpy and python.random

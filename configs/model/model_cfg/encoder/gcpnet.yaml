@@ -2,8 +2,27 @@ _target_: proteinworkshop.models.graph_encoders.gcpnet.GCPNetModel
 # overrides for feature config #
 features:
   # note: will manually be injected into `/features` via `validate_gcpnet_config()` of `proteinworkshop/configs/config.py`
+  scalar_node_features:
+    [
+      "amino_acid_one_hot",
+      "sequence_positional_encoding",
+      "alpha",
+      "kappa",
+      "dihedrals",
+    ]
   vector_node_features: ["orientation"]
+  scalar_edge_features: ["edge_distance"]
   vector_edge_features: ["edge_vectors"]
+# overrides for task config #
+task:
+  task: "regression"
+  losses:
+    graph_regression: l1_loss
+  label_smoothing: 0.0
+  output:
+    - graph_regression
+  supervise_on:
+    - graph_regression
 # global config #
 num_layers: 6 # Number of layers in the model
 emb_dim: 128
@@ -39,10 +58,10 @@ module_cfg:
   pool: ${..pool}
 # model config #
 model_cfg:
-  h_input_dim: ${resolve_feature_config_dim:${features},scalar_node_features,${task},true}
-  chi_input_dim: ${resolve_feature_config_dim:${features},vector_node_features,${task},false}
-  e_input_dim: ${plus:${resolve_feature_config_dim:${features},scalar_edge_features,${task},true},${..num_rbf}}
-  xi_input_dim: ${resolve_feature_config_dim:${features},vector_edge_features,${task},false}
+  h_input_dim: ${resolve_feature_config_dim:${..features},scalar_node_features,${..task},true}
+  chi_input_dim: ${resolve_feature_config_dim:${..features},vector_node_features,${..task},false}
+  e_input_dim: ${plus:${resolve_feature_config_dim:${..features},scalar_edge_features,${..task},true},${..num_rbf}}
+  xi_input_dim: ${resolve_feature_config_dim:${..features},vector_edge_features,${..task},false}
   # note: each `hidden_dim` must be evenly divisible by `bottleneck`
   h_hidden_dim: ${..node_s_emb_dim}
   chi_hidden_dim: ${..node_v_emb_dim}

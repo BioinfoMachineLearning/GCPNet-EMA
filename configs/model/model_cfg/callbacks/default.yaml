@@ -8,7 +8,7 @@ defaults:
   - _self_
 
 model_checkpoint:
-  dirpath: ${hydra.runtime.output_dir}/${hydra.job.name}/checkpoints
+  dirpath: hydra_out_dir/checkpoints
   filename: "epoch_{epoch:03d}"
   save_last: True
   auto_insert_metric_name: False

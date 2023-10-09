@@ -2,6 +2,7 @@
 # Following code curated for GCPNet-EMA (https://github.com/BioinfoMachineLearning/GCPNet-EMA):
 # -------------------------------------------------------------------------------------------------------------------------------------
 
+import collections
 import os
 import tempfile
 from datetime import datetime
@@ -18,6 +19,9 @@ from beartype import beartype
 from beartype.typing import Any, Dict, List, Optional, Tuple
 from lightning import LightningModule
 from omegaconf import DictConfig
+from proteinworkshop.configs.config import validate_config
+from proteinworkshop.datasets.utils import create_example_batch
+from proteinworkshop.models.base import BenchMarkModel
 from torch_scatter import scatter
 
 from src.data.components.ema_dataset import MAX_PLDDT_VALUE
@@ -65,6 +69,7 @@ class GCPNetEMALitModule(LightningModule):
         optimizer: torch.optim.Optimizer,
         scheduler: torch.optim.lr_scheduler,
         compile: bool,
+        model_cfg: DictConfig,
         path_cfg: DictConfig = None,
         **kwargs,
     ):
@@ -73,6 +78,26 @@ class GCPNetEMALitModule(LightningModule):
         :param optimizer: An optimizer instance.
         :param scheduler: A scheduler instance.
         :param compile: Whether to compile the model.
+        :param model_cfg: A `ProteinWorkshop` model checkpoint `DictConfig` containing values for the following keys.
+            - `ckpt_path`: Path to the `ProteinWorkshop` model checkpoint.
+            - `dataset`: Dataset `DictConfig`.
+            - `decoder`: Decoder `DictConfig`.
+            - `encoder`: Encoder `DictConfig`.
+            - `features`: Features `DictConfig`.
+            - `metrics`: Metrics `DictConfig`.
+            - `name`: Name of the run.
+            - `num_workers`: Number of workers for the data loader.
+            - `optimiser`: Optimiser `DictConfig`.
+            - `scheduler`: Scheduler `DictConfig`.
+            - `seed`: Random seed.
+            - `task`: Task `DictConfig`.
+            - `task_name`: Name of the task.
+            - `trainer`: Trainer `DictConfig`.
+            - `finetune`: Finetuning `DictConfig` which contains the values for the following keys.
+                - `finetune.encoder.load_weights`: Whether to load the encoder weights from the checkpoint.
+                - `finetune.encoder.freeze`: Whether to freeze the encoder weights.
+                - `finetune.decoder.load_weights`: Whether to load the decoder weights from the checkpoint.
+                - `finetune.decoder.freeze`: Whether to freeze the decoder weights.
         :param path_cfg: A dictionary-like object containing paths to various directories and
             files.
         :param kwargs: Additional keyword arguments.
@@ -82,6 +107,63 @@ class GCPNetEMALitModule(LightningModule):
         # this line allows to access init params with `self.hparams` attribute
         # also ensures init params will be stored in ckpt
         self.save_hyperparameters(logger=False)
+
+        # `ProteinWorkshop` encoder-decoder model weights #
+        validate_config(model_cfg)
+
+        self.model: LightningModule = BenchMarkModel(model_cfg)
+
+        # Initialize lazy layers for parameter counts.
+        # This is also required for the `BenchMarkModel` model to be able to load weights.
+        # Otherwise, lazy layers will have their parameters reset.
+        # Reference: https://pytorch.org/docs/stable/generated/torch.nn.modules.lazy.LazyModuleMixin.html#torch.nn.modules.lazy.LazyModuleMixin
+        print("Initializing `BenchMarkModel` lazy layers...")
+        with torch.no_grad():
+            batch = create_example_batch()
+            batch = self.model.featurise(batch)
+            out = self.model.forward(batch)
+            del batch, out
+
+        # NOTE: we only want to load weights
+        if (
+            model_cfg.ckpt_path
+            and model_cfg.ckpt_path != "none"
+            and os.path.exists(model_cfg.ckpt_path)
+        ):
+            log.info(f"Loading `BenchMarkModel` weights from checkpoint {model_cfg.ckpt_path}...")
+            state_dict = torch.load(model_cfg.ckpt_path)["state_dict"]
+
+            if model_cfg.finetune.encoder.load_weights:
+                encoder_weights = collections.OrderedDict()
+                for k, v in state_dict.items():
+                    if k.startswith("encoder"):
+                        encoder_weights[k.replace("encoder.", "")] = v
+                log.info(f"Loading `BenchMarkModel` encoder weights: {encoder_weights}")
+                err = self.model.encoder.load_state_dict(encoder_weights, strict=False)
+                log.info(f"Error loading `BenchMarkModel` encoder weights: {err}")
+
+            if model_cfg.finetune.decoder.load_weights:
+                decoder_weights = collections.OrderedDict()
+                for k, v in state_dict.items():
+                    if k.startswith("decoder"):
+                        decoder_weights[k.replace("decoder.", "")] = v
+                log.info(f"Loading `BenchMarkModel` decoder weights: {decoder_weights}")
+                err = self.model.decoder.load_state_dict(decoder_weights, strict=False)
+                log.info(f"Error loading `BenchMarkModel` decoder weights: {err}")
+
+            if model_cfg.finetune.encoder.freeze:
+                log.info("Freezing `BenchMarkModel` encoder!")
+                for param in self.model.encoder.parameters():
+                    param.requires_grad = False
+
+            if model_cfg.finetune.decoder.freeze:
+                log.info("Freezing `BenchMarkModel` decoder!")
+                for param in self.model.decoder.parameters():
+                    param.requires_grad = False
+        else:
+            log.info(
+                "A valid checkpoint path was not found. Training a new set of weights for the `BenchMarkModel`..."
+            )
 
         # loss function and metrics #
         self.criterion = torch.nn.SmoothL1Loss()

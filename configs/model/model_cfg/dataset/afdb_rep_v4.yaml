@@ -11,7 +11,7 @@ datamodule:
 
   pin_memory: True
   use_graphein: True
-  transform: ${transforms}
+  transform: null
 
 dataset_name: "afdb_rep_v4"
 num_classes: None # number of classes
