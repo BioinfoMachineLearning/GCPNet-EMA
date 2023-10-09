@@ -346,7 +346,9 @@ class GCPNetEMALitModule(LightningModule):
                 for p in self.net.parameters():
                     if p.grad is not None:
                         del p.grad  # free some memory
-                torch.cuda.empty_cache()
+                log.warning(
+                    "Ran out of memory in the forward pass. Skipping batches for all ranks."
+                )
                 return None
 
         # update metrics
@@ -425,7 +427,9 @@ class GCPNetEMALitModule(LightningModule):
                 for p in self.net.parameters():
                     if p.grad is not None:
                         del p.grad  # free some memory
-                torch.cuda.empty_cache()
+                log.warning(
+                    "Ran out of memory in the forward pass. Skipping batches for all ranks."
+                )
                 return None
 
         # update metrics
@@ -747,7 +751,9 @@ class GCPNetEMALitModule(LightningModule):
                 for p in self.net.parameters():
                     if p.grad is not None:
                         del p.grad  # free some memory
-                torch.cuda.empty_cache()
+                log.warning(
+                    "Ran out of memory in the backward pass. Skipping batches for all ranks."
+                )
 
     def setup(self, stage: str):
         """Lightning hook that is called at the beginning of fit (train + validate), validate,
