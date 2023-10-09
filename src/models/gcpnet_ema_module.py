@@ -237,9 +237,13 @@ class GCPNetEMALitModule(LightningModule):
         except RuntimeError as e:
             if "out of memory" in str(e):
                 log.warning(
-                    f"Ran out of memory, skipping current training batch with index {batch_idx}"
+                    f"Ran out of memory in the forward pass. Skipping current training batch with index {batch_idx}"
                 )
                 if not torch_dist.is_initialized():
+                    for p in self.net.parameters():
+                        if p.grad is not None:
+                            del p.grad  # free some memory
+                    torch.cuda.empty_cache()
                     return None
                 skip_flag = torch.ones((), device=self.device, dtype=torch.bool)
             else:
@@ -248,12 +252,18 @@ class GCPNetEMALitModule(LightningModule):
         # NOTE: for skipping batches in a multi-device setting
         # credit: https://github.com/Lightning-AI/lightning/issues/5243#issuecomment-1553404417
         if torch_dist.is_initialized():
+            # if any rank skips a batch, then all other ranks need to skip
+            # their batches as well so DDP can properly keep all ranks synced
             world_size = torch_dist.get_world_size()
             torch_dist.barrier()
             result = [torch.zeros_like(skip_flag) for _ in range(world_size)]
             torch_dist.all_gather(result, skip_flag)
             any_skipped = torch.sum(torch.stack(result)).bool().item()
             if any_skipped:
+                for p in self.net.parameters():
+                    if p.grad is not None:
+                        del p.grad  # free some memory
+                torch.cuda.empty_cache()
                 return None
 
         # update metrics
@@ -305,9 +315,13 @@ class GCPNetEMALitModule(LightningModule):
         except RuntimeError as e:
             if "out of memory" in str(e):
                 log.warning(
-                    f"Ran out of memory, skipping current validation batch with index {batch_idx}"
+                    f"Ran out of memory in the forward pass. Skipping current validation batch with index {batch_idx}"
                 )
                 if not torch_dist.is_initialized():
+                    for p in self.net.parameters():
+                        if p.grad is not None:
+                            del p.grad  # free some memory
+                    torch.cuda.empty_cache()
                     return None
                 skip_flag = torch.ones((), device=self.device, dtype=torch.bool)
             else:
@@ -316,12 +330,18 @@ class GCPNetEMALitModule(LightningModule):
         # NOTE: for skipping batches in a multi-device setting
         # credit: https://github.com/Lightning-AI/lightning/issues/5243#issuecomment-1553404417
         if torch_dist.is_initialized():
+            # if any rank skips a batch, then all other ranks need to skip
+            # their batches as well so DDP can properly keep all ranks synced
             world_size = torch_dist.get_world_size()
             torch_dist.barrier()
             result = [torch.zeros_like(skip_flag) for _ in range(world_size)]
             torch_dist.all_gather(result, skip_flag)
             any_skipped = torch.sum(torch.stack(result)).bool().item()
             if any_skipped:
+                for p in self.net.parameters():
+                    if p.grad is not None:
+                        del p.grad  # free some memory
+                torch.cuda.empty_cache()
                 return None
 
         # update metrics
@@ -604,6 +624,45 @@ class GCPNetEMALitModule(LightningModule):
             metrics["predicted_per_residue_plddt_absolute_error"] = pred_per_res_plddt_ae
             batch_metrics.append(metrics)
         return batch_metrics
+
+    @beartype
+    def backward(self, loss: torch.Tensor, *args: Any, **kwargs: Any):
+        """Overrides Lightning's `backward` step to add an out-of-memory (OOM) check."""
+        # by default, do not skip the current batch
+        skip_flag = torch.zeros(
+            (), device=self.device, dtype=torch.bool
+        )  # NOTE: for skipping batches in a multi-device setting
+
+        try:
+            loss.backward(*args, **kwargs)
+        except RuntimeError as e:
+            if "out of memory" in str(e):
+                log.warning(f"Ran out of memory in the backward pass. Skipping batch due to: {e}")
+                if not torch_dist.is_initialized():
+                    for p in self.net.parameters():
+                        if p.grad is not None:
+                            del p.grad  # free some memory
+                    torch.cuda.empty_cache()
+                    return None
+                skip_flag = torch.ones((), device=self.device, dtype=torch.bool)
+            else:
+                raise e
+
+        # NOTE: for skipping batches in a multi-device setting
+        # credit: https://github.com/Lightning-AI/lightning/issues/5243#issuecomment-1553404417
+        if torch_dist.is_initialized():
+            # if any rank skips a batch, then all other ranks need to skip
+            # their batches as well so DDP can properly keep all ranks synced
+            world_size = torch_dist.get_world_size()
+            torch_dist.barrier()
+            result = [torch.zeros_like(skip_flag) for _ in range(world_size)]
+            torch_dist.all_gather(result, skip_flag)
+            any_skipped = torch.sum(torch.stack(result)).bool().item()
+            if any_skipped:
+                for p in self.net.parameters():
+                    if p.grad is not None:
+                        del p.grad  # free some memory
+                torch.cuda.empty_cache()
 
     def setup(self, stage: str):
         """Lightning hook that is called at the beginning of fit (train + validate), validate,
