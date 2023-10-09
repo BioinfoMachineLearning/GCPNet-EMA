@@ -288,7 +288,7 @@ class GCPNetEMALitModule(LightningModule):
 
         return loss
 
-    def training_epoch_end(self):
+    def on_train_epoch_end(self):
         """Lightning hook that is called when the train epoch ends."""
         # log metrics
         self.log(f"{self.train_phase}/loss", self.train_loss, prog_bar=False)
@@ -367,7 +367,7 @@ class GCPNetEMALitModule(LightningModule):
 
         return loss
 
-    def validation_epoch_end(self):
+    def on_validation_epoch_end(self):
         """Lightning hook that is called when the validation epoch ends."""
         # update best-so-far validation metrics according to the current epoch's results
         self.val_per_residue_mse_best.update(
@@ -464,7 +464,7 @@ class GCPNetEMALitModule(LightningModule):
 
         return loss
 
-    def test_epoch_end(self):
+    def on_test_epoch_end(self):
         """Lightning hook that is called when the test epoch ends."""
         # log metrics
         self.log(f"{self.test_phase}/loss", self.test_loss, prog_bar=False)
