@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sweep-gcpnet-ema-1
+  labels:
+    k8s-app: sweep-gcpnet-ema-1
+spec:
+  replicas: 16
+  selector:
+    matchLabels:
+      k8s-app: sweep-gcpnet-ema-1
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        k8s-app: sweep-gcpnet-ema-1
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: nvidia.com/gpu.product
+                    operator: In
+                    values:
+                      # NOTE: we select 24GB GPUs only here
+                      - NVIDIA-A10
+                      - NVIDIA-GeForce-RTX-3090
+                      - NVIDIA-TITAN-RTX
+                      - NVIDIA-RTX-A5000
+                      - Quadro-RTX-6000
+      containers:
+        - name: sweep-gcpnet-ema-1-pod
+          image: gitlab-registry.nrp-nautilus.io/bioinfomachinelearning/bio-diffusion:bb558b48
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8880
+          resources:
+            limits:
+              cpu: 2
+              memory: 14Gi
+              nvidia.com/gpu: 1
+            requests:
+              cpu: 2
+              memory: 12Gi
+              nvidia.com/gpu: 1
+          volumeMounts:
+            - mountPath: /data
+              name: acmwhb-gcpnet-pvc-aux-11
+            - mountPath: /dev/shm
+              name: dshm
+          workingDir: /data/Repositories/Lab_Repositories/GCPNet-EMA
+          command:
+            - bash
+            - -c
+            - cd /data/Repositories/Lab_Repositories/GCPNet-EMA && git checkout main && git pull origin main
+              && /data/Repositories/Lab_Repositories/GCPNet-EMA/GCPNet-EMA/bin/python -m wandb agent $my_sweep_id
+          env:
+            - name: NCCL_SOCKET_IFNAME
+              value: eth0
+            - name: NCCL_DEBUG
+              value: INFO
+      imagePullSecrets:
+        - name: regcred-bio-diffusion
+      restartPolicy: Never
+      volumes:
+        - name: acmwhb-gcpnet-pvc-aux-11
+          persistentVolumeClaim:
+            claimName: acmwhb-gcpnet-pvc-aux-11
+        - emptyDir:
+            medium: Memory
+          name: dshm

@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: sweep-gcpnet-ema
+  name: sweep-gcpnet-ema-2
   labels:
-    k8s-app: sweep-gcpnet-ema
+    k8s-app: sweep-gcpnet-ema-2
 spec:
-  replicas: 4
+  replicas: 16
   selector:
     matchLabels:
-      k8s-app: sweep-gcpnet-ema
+      k8s-app: sweep-gcpnet-ema-2
   backoffLimit: 0
   template:
     metadata:
       labels:
-        k8s-app: sweep-gcpnet-ema
+        k8s-app: sweep-gcpnet-ema-2
     spec:
       affinity:
         nodeAffinity:
@@ -30,7 +30,7 @@ spec:
                       - NVIDIA-RTX-A5000
                       - Quadro-RTX-6000
       containers:
-        - name: sweep-gcpnet-ema-pod
+        - name: sweep-gcpnet-ema-2-pod
           image: gitlab-registry.nrp-nautilus.io/bioinfomachinelearning/bio-diffusion:bb558b48
           imagePullPolicy: IfNotPresent
           ports:
