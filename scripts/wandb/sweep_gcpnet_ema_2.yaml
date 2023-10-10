@@ -1,0 +1,79 @@
+program: src/train.py
+method: grid
+name: sweep_gcpnet_ema
+metric: # NOTE: does not matter, as we are using sweep to run the experiment
+  goal: maximize
+  name: val/PerModelPearsonCorrCoef
+
+parameters:
+  callbacks:
+    value: default
+
+  data:
+    value: ema
+
+  data.batch_size:
+    values: [4, 8]
+
+  data.num_workers:
+    value: 4
+
+  extras.enforce_tags:
+    value: False
+
+  logger:
+    value: wandb
+
+  logger.wandb.tags:
+    value: "gcpnet_ema"
+
+  logger.wandb.group:
+    value: "GCPNet-EMA"
+
+  model:
+    value: gcpnet_ema
+
+  # NOTE: we want to load the pre-trained encoder weights
+  model.model_cfg.finetune.encoder.load_weights:
+    value: True
+
+  # NOTE: we do not want to freeze the encoder or decoder
+  model.model_cfg.finetune.encoder.freeze:
+    value: False
+
+  model.model_cfg.finetune.decoder.freeze:
+    value: False
+
+  model.optimizer.lr:
+    values: [1e-4, 1e-3]
+
+  model.optimizer.weight_decay:
+    values: [1e-5, 1e-3]
+
+  model.model_cfg.decoder.dropout:
+    values: [0.0, 0.5]
+
+  model.compile:
+    value: False
+
+  seed:
+    value: 76
+
+  trainer:
+    value: default
+
+  trainer.min_epochs:
+    value: 1
+
+  trainer.max_epochs:
+    value: 1000
+
+  test:
+    value: True
+
+command:
+  - HYDRA_FULL_ERROR=1
+  - WANDB_START_METHOD=thread
+  - /data/Repositories/Lab_Repositories/GCPNet-EMA/GCPNet-EMA/bin/python
+  - ${program}
+  - ${args_no_hyphens}

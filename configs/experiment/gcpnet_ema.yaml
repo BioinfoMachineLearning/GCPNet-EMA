@@ -12,22 +12,26 @@ defaults:
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters
 
-tags: ["gcpnet", "ema"]
+tags: ["gcpnet_ema"]
 
-seed: 12345
+seed:
 
 trainer:
-  min_epochs: 10
-  max_epochs: 10
-  gradient_clip_val: 0.5
+  min_epochs: 1
+  max_epochs: 1000
 
 model:
   optimizer:
-    lr: 0.002
+    lr: 1e-4
+    weight_decay: 1e-5
+  model_cfg:
+    decoder:
+      dropout: 0.0
   compile: false
 
 data:
-  batch_size: 32
+  batch_size: 4
+  num_workers: 4
 
 logger:
   wandb:

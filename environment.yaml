@@ -234,6 +234,7 @@ dependencies:
       - pandas==1.5.3
       - parso==0.8.3
       - pbr==5.11.1
+      - pdb-tools==2.5.0
       - pexpect==4.8.0
       - pickleshare==0.7.5
       - pillow==9.3.0
