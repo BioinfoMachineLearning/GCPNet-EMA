@@ -1,6 +1,6 @@
 program: src/train.py
 method: grid
-name: sweep_gcpnet_ema
+name: sweep_gcpnet_ema_2
 metric: # NOTE: does not matter, as we are using sweep to run the experiment
   goal: maximize
   name: val/PerModelPearsonCorrCoef
