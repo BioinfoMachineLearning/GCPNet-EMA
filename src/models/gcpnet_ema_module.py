@@ -347,11 +347,10 @@ class GCPNetEMALitModule(LightningModule):
                 self.metrics[self.train_phase][metric](preds, labels)
 
         # log per-model metrics
-        ca_batch = scatter(
-            batch.batch[batch.mask], batch.atom_residue_idx[batch.mask], dim=0, reduce="mean"
-        ).long()  # get node-batch indices for Ca atoms
-        preds_out = scatter(preds, ca_batch, dim=0, reduce="mean")  # get batch-wise global plDDT
-        labels_out = scatter(labels, ca_batch, dim=0, reduce="mean")
+        preds_out = scatter(
+            preds, batch.batch, dim=0, reduce="mean"
+        )  # get batch-wise global plDDT
+        labels_out = scatter(labels, batch.batch, dim=0, reduce="mean")
         for metric in self.metrics[self.train_phase].keys():
             if "model" in metric.lower():
                 self.metrics[self.train_phase][metric](preds_out, labels_out)
@@ -425,11 +424,10 @@ class GCPNetEMALitModule(LightningModule):
                 self.metrics[self.val_phase][metric](preds, labels)
 
         # log per-model metrics
-        ca_batch = scatter(
-            batch.batch[batch.mask], batch.atom_residue_idx[batch.mask], dim=0, reduce="mean"
-        ).long()  # get node-batch indices for Ca atoms
-        preds_out = scatter(preds, ca_batch, dim=0, reduce="mean")  # get batch-wise global plDDT
-        labels_out = scatter(labels, ca_batch, dim=0, reduce="mean")
+        preds_out = scatter(
+            preds, batch.batch, dim=0, reduce="mean"
+        )  # get batch-wise global plDDT
+        labels_out = scatter(labels, batch.batch, dim=0, reduce="mean")
         for metric in self.metrics[self.val_phase].keys():
             if "model" in metric.lower():
                 self.metrics[self.val_phase][metric](preds_out, labels_out)
@@ -522,11 +520,10 @@ class GCPNetEMALitModule(LightningModule):
                 self.metrics[self.test_phase][metric](preds, labels)
 
         # log per-model metrics
-        ca_batch = scatter(
-            batch.batch[batch.mask], batch.atom_residue_idx[batch.mask], dim=0, reduce="mean"
-        ).long()  # get node-batch indices for Ca atoms
-        preds_out = scatter(preds, ca_batch, dim=0, reduce="mean")  # get batch-wise global plDDT
-        labels_out = scatter(labels, ca_batch, dim=0, reduce="mean")
+        preds_out = scatter(
+            preds, batch.batch, dim=0, reduce="mean"
+        )  # get batch-wise global plDDT
+        labels_out = scatter(labels, batch.batch, dim=0, reduce="mean")
         for metric in self.metrics[self.test_phase].keys():
             if "model" in metric.lower():
                 self.metrics[self.test_phase][metric](preds_out, labels_out)
@@ -564,7 +561,6 @@ class GCPNetEMALitModule(LightningModule):
         :param batch_idx: The batch index.
         :param dataloader_idx: The dataloader index.
         """
-        batch.init_h = batch.h.clone()
         if hasattr(batch, "true_pdb_filepath") and all(batch.true_pdb_filepath):
             # note: currently, we can only score the loss for batches without any missing true (i.e., native) PDB files
             loss, preds, labels = self.model_step(batch)
@@ -573,23 +569,15 @@ class GCPNetEMALitModule(LightningModule):
             loss, labels = None, None
 
         # collect per-model predictions
-        batch.ca_batch = scatter(
-            batch.batch[batch.mask], batch.atom_residue_idx[batch.mask], dim=0, reduce="mean"
-        ).long()  # get node-batch indices for Ca atoms
         global_preds = scatter(
-            preds, batch.ca_batch, dim=0, reduce="mean"
+            preds, batch.batch, dim=0, reduce="mean"
         )  # get batch-wise global plDDT
 
         if loss is not None:
             # get batch-wise global plDDT loss
-            loss = scatter(loss, batch.ca_batch, dim=0, reduce="mean")
+            loss = scatter(loss, batch.batch, dim=0, reduce="mean")
             # get initial residue-wise plDDT values from AlphaFold
-            batch.initial_res_scores = scatter(
-                batch.init_h[:, -1][batch.mask],
-                batch.atom_residue_idx[batch.mask],
-                dim=0,
-                reduce="mean",
-            )
+            batch.initial_res_scores = batch.alphafold_plddt_per_residue.squeeze(-1)
 
         # collect outputs, and visualize predicted lDDT scores
         step_outputs = self.record_ema_preds(
@@ -603,7 +591,11 @@ class GCPNetEMALitModule(LightningModule):
     @beartype
     def on_predict_epoch_end(self):
         """Lightning hook that is called when the predict epoch ends."""
-        step_outputs = getattr(self, f"{self.predict_phase}_step_outputs")
+        step_outputs = [
+            output_list
+            for output_lists in getattr(self, f"{self.predict_phase}_step_outputs")
+            for output_list in output_lists
+        ]
         # compile predictions collected by the current device (e.g., rank zero)
         predictions_csv_df = pd.DataFrame(step_outputs)
         predictions_csv_df.to_csv(self.predictions_csv_path, index=False)
@@ -640,7 +632,7 @@ class GCPNetEMALitModule(LightningModule):
         pred_global_scores = global_preds.detach().cpu().numpy()
         batch_loss = None if loss is None else loss.detach().cpu().numpy()
         batch_labels = None if labels is None else labels.detach().cpu().numpy()
-        res_batch_index = batch.ca_batch.detach().cpu().numpy()
+        res_batch_index = batch.batch.detach().cpu().numpy()
         for b_index in range(batch.num_graphs):
             metrics = {}
             temp_pdb_dir = tempfile._get_default_tempdir()

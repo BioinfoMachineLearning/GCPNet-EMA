@@ -129,7 +129,10 @@ def evaluate(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
     log.info("Loading checkpoint!")
     model = model.load_from_checkpoint(
-        checkpoint_path=cfg.ckpt_path, strict=True, path_cfg=hydra.utils.instantiate(cfg.paths)
+        checkpoint_path=cfg.ckpt_path,
+        map_location="cpu",
+        strict=True,
+        path_cfg=hydra.utils.instantiate(cfg.paths),
     )
 
     log.info("Starting testing!")
