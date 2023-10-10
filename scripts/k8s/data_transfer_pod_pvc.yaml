@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: acmwhb-gcpnet-ema-data-transfer-pod-pvc
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: topology.kubernetes.io/region
+                operator: In
+                values:
+                  - us-central
+              - key: nvidia.com/gpu.product
+                operator: In
+                values:
+                  - NVIDIA-A10
+                  - NVIDIA-GeForce-RTX-3090
+                  - NVIDIA-TITAN-RTX
+                  - NVIDIA-RTX-A5000
+                  - Quadro-RTX-6000
+  containers:
+    - command:
+        - sh
+        - -c
+        - echo 'I am a new pod for data transfers to one of my PVCs' && sleep infinity
+      env:
+        - name: NCCL_SOCKET_IFNAME
+          value: eth0
+        - name: NCCL_DEBUG
+          value: INFO
+      image: ubuntu:20.04
+      name: acmwhb-gcpnet-ema-data-transfer-pod-pvc
+      ports:
+        - containerPort: 8880
+      resources:
+        limits:
+          cpu: 2
+          memory: 18Gi
+          nvidia.com/gpu: 1
+        requests:
+          cpu: 2
+          memory: 16Gi
+          nvidia.com/gpu: 1
+      volumeMounts:
+        - mountPath: /data_11
+          name: acmwhb-gcpnet-pvc-aux-11
+        - mountPath: /data_12
+          name: acmwhb-gcpnet-pvc-aux-12
+        - mountPath: /data_13
+          name: acmwhb-gcpnet-pvc-aux-13
+  volumes:
+    - name: acmwhb-gcpnet-pvc-aux-11
+      persistentVolumeClaim:
+        claimName: acmwhb-gcpnet-pvc-aux-11
+    - name: acmwhb-gcpnet-pvc-aux-12
+      persistentVolumeClaim:
+        claimName: acmwhb-gcpnet-pvc-aux-12
+    - name: acmwhb-gcpnet-pvc-aux-13
+      persistentVolumeClaim:
+        claimName: acmwhb-gcpnet-pvc-aux-13
