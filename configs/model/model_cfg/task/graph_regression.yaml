@@ -14,7 +14,7 @@ decoder:
     activations: ["relu", "relu", "relu", "none"]
     skip: "concat" # Or sum/False
     out_dim: 1
-    input: "graph_embedding"
+    input: "node_embedding"
 
 metrics:
   rmse:

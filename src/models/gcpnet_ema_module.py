@@ -119,7 +119,20 @@ class GCPNetEMALitModule(LightningModule):
         with torch.no_grad():
             batch = create_example_batch()
             batch = self.model.featurise(batch)
-            out = self.model.forward(batch)
+            out = self.model.encoder(batch)
+            # NOTE: lazy layers require us to manually construct the dummy input
+            # `Tensor` feature-by-feature (e.g., for the sake of feature ablations)
+            decoder_in = [out["node_embedding"]]
+            if not model_cfg.ablate_af2_plddt:
+                decoder_in.append(
+                    torch.zeros((batch.num_nodes, 1), device=self.device, dtype=torch.float)
+                )
+            if not model_cfg.ablate_esm_embeddings:
+                decoder_in.append(
+                    torch.zeros((batch.num_nodes, 1280), device=self.device, dtype=torch.float)
+                )
+            decoder_in = torch.cat(decoder_in, dim=-1)
+            out = self.model.decoder["graph_regression"](decoder_in)
             del batch, out
 
         # NOTE: we only want to load weights
@@ -228,53 +241,25 @@ class GCPNetEMALitModule(LightningModule):
         :param batch: A batch of data.
         :return: A tuple containing the batch and the predictions.
         """
-        # # correct residue-wise graph metadata for batch context
-        # batch.ca_atom_idx, ca_atom_batch_index = convert_idx_from_batch_local_to_global(
-        #     batch.ca_atom_idx, batch.batch, batch.num_graphs
-        # )
-        # batch.atom_residue_idx, _ = convert_idx_from_batch_local_to_global(
-        #     batch.atom_residue_idx, ca_atom_batch_index, batch.num_graphs
-        # )
-
-        # # centralize node positions to make them translation-invariant
-        # _, batch.x = centralize(batch, key="x", batch_index=batch.batch, node_mask=batch.mask)
-
-        # # craft complete local frames corresponding to each edge
-        # batch.f_ij = localize(
-        #     batch.x,
-        #     batch.edge_index,
-        #     norm_x_diff=self.hparams.module_cfg.norm_x_diff,
-        #     node_mask=batch.mask,
-        # )
-
-        # # embed node and edge input
-        # batch.h = torch.cat((batch.h, self.atom_embedding(batch.atom_types)), dim=-1)
-        # (h, chi), (e, xi) = self.gcp_embedding(batch)
-
-        # # update graph features using a series of geometric message-passing layers
-        # for layer in self.interaction_layers:
-        #     (h, chi) = layer((h, chi), (e, xi), batch.edge_index, batch.f_ij, node_mask=batch.mask)
-
-        # # record final version of each feature in `Batch` object
-        # batch.h, batch.chi, batch.e, batch.xi = h, chi, e, xi
-
-        # # summarize intermediate node representations as final predictions
-        # out = self.invariant_node_projection[0]((h, chi))  # e.g., GCPLayerNorm()
-        # out = self.invariant_node_projection[1](
-        #     out, batch.edge_index, batch.f_ij, node_inputs=True, node_mask=batch.mask
-        # )  # e.g., GCP((h, chi)) -> h'
-        # res_out = scatter(
-        #     out[batch.mask], batch.atom_residue_idx[batch.mask], dim=0, reduce="mean"
-        # )  # get batch-wise plDDT for each residue
-        # res_out = self.dense(res_out).squeeze()
-
         # featurize the input batch according to model requirements
-        batch = self.model.featurise(batch)
+        encoder_batch = self.model.featurise(batch)
 
-        # make a forward pass with the model
-        out = self.model.forward(batch)
+        # make a forward pass with the encoder
+        encoder_out = self.model.encoder(encoder_batch)
 
-        return batch, out
+        # make a forward pass with the decoder
+        decoder_in = [encoder_out["node_embedding"]]
+        if not self.hparams.model_cfg.ablate_af2_plddt and "alphafold_plddt_per_residue" in batch:
+            decoder_in.append(batch.alphafold_plddt_per_residue)
+        if (
+            not self.hparams.model_cfg.ablate_esm_embeddings
+            and "esm_embedding_per_residue" in batch
+        ):
+            decoder_in.append(batch.esm_embedding_per_residue)
+        decoder_in = torch.cat(decoder_in, dim=-1)
+        decoder_out = self.model.decoder["graph_regression"](decoder_in)
+
+        return batch, decoder_out.squeeze(-1)
 
     def model_step(self, batch: Any) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Take a step with the model.
@@ -321,6 +306,7 @@ class GCPNetEMALitModule(LightningModule):
         try:
             loss, preds, labels = self.model_step(batch)
         except RuntimeError as e:
+            skip_flag = torch.ones((), device=self.device, dtype=torch.bool)
             if "out of memory" in str(e):
                 log.warning(
                     f"Ran out of memory in the forward pass. Skipping current training batch with index {batch_idx}"
@@ -330,11 +316,7 @@ class GCPNetEMALitModule(LightningModule):
                     for p in self.net.parameters():
                         if p.grad is not None:
                             del p.grad  # free some memory
-                    torch.cuda.empty_cache()
                     return None
-                skip_flag = torch.ones((), device=self.device, dtype=torch.bool)
-            else:
-                raise e
 
         # NOTE: for skipping batches in a multi-device setting
         # credit: https://github.com/Lightning-AI/lightning/issues/5243#issuecomment-1553404417
@@ -402,6 +384,7 @@ class GCPNetEMALitModule(LightningModule):
         try:
             loss, preds, labels = self.model_step(batch)
         except RuntimeError as e:
+            skip_flag = torch.ones((), device=self.device, dtype=torch.bool)
             if "out of memory" in str(e):
                 log.warning(
                     f"Ran out of memory in the forward pass. Skipping current validation batch with index {batch_idx}"
@@ -411,11 +394,7 @@ class GCPNetEMALitModule(LightningModule):
                     for p in self.net.parameters():
                         if p.grad is not None:
                             del p.grad  # free some memory
-                    torch.cuda.empty_cache()
                     return None
-                skip_flag = torch.ones((), device=self.device, dtype=torch.bool)
-            else:
-                raise e
 
         # NOTE: for skipping batches in a multi-device setting
         # credit: https://github.com/Lightning-AI/lightning/issues/5243#issuecomment-1553404417
@@ -728,6 +707,7 @@ class GCPNetEMALitModule(LightningModule):
         try:
             loss.backward(*args, **kwargs)
         except RuntimeError as e:
+            skip_flag = torch.ones((), device=self.device, dtype=torch.bool)
             if "out of memory" in str(e):
                 log.warning(f"Ran out of memory in the backward pass. Skipping batch due to: {e}")
                 if not torch_dist.is_initialized():
@@ -735,11 +715,7 @@ class GCPNetEMALitModule(LightningModule):
                     for p in self.net.parameters():
                         if p.grad is not None:
                             del p.grad  # free some memory
-                    torch.cuda.empty_cache()
                     return None
-                skip_flag = torch.ones((), device=self.device, dtype=torch.bool)
-            else:
-                raise e
 
         # NOTE: for skipping batches in a multi-device setting
         # credit: https://github.com/Lightning-AI/lightning/issues/5243#issuecomment-1553404417
@@ -769,7 +745,8 @@ class GCPNetEMALitModule(LightningModule):
         :param stage: Either `"fit"`, `"validate"`, `"test"`, or `"predict"`.
         """
         if self.hparams.compile and stage == "fit":
-            self.net = torch.compile(self.net)
+            self.model.encoder = torch.compile(self.model.encoder)
+            self.model.decoder = torch.compile(self.model.decoder)
 
     def configure_optimizers(self):
         """Choose what optimizers and learning-rate schedulers to use in your optimization.

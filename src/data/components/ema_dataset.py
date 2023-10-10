@@ -304,6 +304,8 @@ class EMADataset(Dataset):
         pdbtools_dir: Optional[str] = None,
         subset_to_ca_atoms_only: bool = False,
         structures_batches_for_protein_workshop: bool = False,
+        ablate_af2_plddt: bool = False,
+        ablate_esm_embeddings: bool = False,
     ):
         """Initializes a dataset of PDBs."""
         self.decoy_pdbs = decoy_pdbs
@@ -319,6 +321,8 @@ class EMADataset(Dataset):
         self.pdbtools_dir = pdbtools_dir
         self.subset_to_ca_atoms_only = subset_to_ca_atoms_only
         self.structures_batches_for_protein_workshop = structures_batches_for_protein_workshop
+        self.ablate_af2_plddt = ablate_af2_plddt
+        self.ablate_esm_embeddings = ablate_esm_embeddings
         self.num_pdbs = len(self.decoy_pdbs)
 
         os.makedirs(self.model_data_cache_dir, exist_ok=True)
@@ -651,6 +655,8 @@ class EMADataset(Dataset):
     @beartype
     def structure_data_for_protein_workshop(
         data: Data,
+        ablate_af2_plddt: bool = False,
+        ablate_esm_embeddings: bool = False,
         coords_fill_value: float = 1e-5,
     ) -> Data:
         """Structure data for `ProteinWorkshop` models.
@@ -660,12 +666,28 @@ class EMADataset(Dataset):
         :return: `Data` collection
         """
         restructured_data = Data()
+        # NOTE: `CA` is assumed to the `representation` of one's pre-trained ProteinWorkshop model
         data.coords = data.x.reshape(-1, 14, 3)[:, :4, :]
         restructured_data.coords = F.pad(
             data.coords, (0, 0, 0, 37 - data.coords.shape[1], 0, 0), value=coords_fill_value
         )
         restructured_data.residue_type = data.residue_types
         restructured_data.label = getattr(data, "decoy_protein_per_residue_lddt", None)
+        # NOTE: `knn_16` is assumed to be the `edge_type` of one's pre-trained ProteinWorkshop model
+        restructured_data.edge_index = torch_cluster.knn_graph(
+            data.coords[:, 1, :], k=16, loop=False
+        )
+        restructured_data.pos = restructured_data.coords[:, 1, :]
+        restructured_data.alphafold_plddt_per_residue = (
+            None
+            if ablate_af2_plddt
+            else data.decoy_protein_alphafold_per_residue_plddt.view(-1, 14)[:, 1].unsqueeze(-1)
+        )
+        restructured_data.esm_embedding_per_residue = (
+            None
+            if ablate_esm_embeddings
+            else data.atom_rep.view(-1, 14, data.atom_rep.shape[-1])[:, 1, :]
+        )
         return restructured_data
 
     @staticmethod
@@ -861,7 +883,11 @@ class EMADataset(Dataset):
 
         # finalize graph features according to current graph topology and model specifications
         if self.structures_batches_for_protein_workshop:
-            data = self.structure_data_for_protein_workshop(data)
+            data = self.structure_data_for_protein_workshop(
+                data,
+                ablate_af2_plddt=self.ablate_af2_plddt,
+                ablate_esm_embeddings=self.ablate_esm_embeddings,
+            )
         else:
             data = self.finalize_graph_topology_and_features_within_data(
                 data,

@@ -61,6 +61,8 @@ def predict(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     log.info(f"Instantiating model <{cfg.model._target_}>")
     with open_dict(cfg):
         cfg.model.model_cfg = validate_config(cfg.model.model_cfg)
+        cfg.model.model_cfg.ablate_af2_plddt = cfg.data.ablate_af2_plddt
+        cfg.model.model_cfg.ablate_esm_embeddings = cfg.data.ablate_esm_embeddings
     benchmark_model = BenchMarkModel(cfg.model.model_cfg)
     model: LightningModule = hydra.utils.instantiate(
         cfg.model,

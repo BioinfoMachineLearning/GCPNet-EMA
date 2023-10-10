@@ -30,6 +30,8 @@ class EMADataModule(LightningDataModule):
         pdbtools_dir: Optional[str] = None,
         subset_to_ca_atoms_only: bool = False,
         structures_batches_for_protein_workshop: bool = False,
+        ablate_af2_plddt: bool = False,
+        ablate_esm_embeddings: bool = False,
         batch_size: int = 1,
         num_workers: int = 0,
         pin_memory: bool = True,
@@ -144,6 +146,8 @@ class EMADataModule(LightningDataModule):
                 pdbtools_dir=self.hparams.pdbtools_dir,
                 subset_to_ca_atoms_only=self.hparams.subset_to_ca_atoms_only,
                 structures_batches_for_protein_workshop=self.hparams.structures_batches_for_protein_workshop,
+                ablate_af2_plddt=self.hparams.ablate_af2_plddt,
+                ablate_esm_embeddings=self.hparams.ablate_esm_embeddings,
             )
             self.data_val = EMADataset(
                 decoy_pdbs=valid_pdbs,
@@ -159,6 +163,8 @@ class EMADataModule(LightningDataModule):
                 pdbtools_dir=self.hparams.pdbtools_dir,
                 subset_to_ca_atoms_only=self.hparams.subset_to_ca_atoms_only,
                 structures_batches_for_protein_workshop=self.hparams.structures_batches_for_protein_workshop,
+                ablate_af2_plddt=self.hparams.ablate_af2_plddt,
+                ablate_esm_embeddings=self.hparams.ablate_esm_embeddings,
             )
 
         if stage and stage == "test" and not self.data_test:
@@ -179,6 +185,8 @@ class EMADataModule(LightningDataModule):
                 pdbtools_dir=self.hparams.pdbtools_dir,
                 subset_to_ca_atoms_only=self.hparams.subset_to_ca_atoms_only,
                 structures_batches_for_protein_workshop=self.hparams.structures_batches_for_protein_workshop,
+                ablate_af2_plddt=self.hparams.ablate_af2_plddt,
+                ablate_esm_embeddings=self.hparams.ablate_esm_embeddings,
             )
 
         if stage and stage == "predict":
@@ -201,6 +209,8 @@ class EMADataModule(LightningDataModule):
                 pdbtools_dir=self.hparams.pdbtools_dir,
                 subset_to_ca_atoms_only=self.hparams.subset_to_ca_atoms_only,
                 structures_batches_for_protein_workshop=self.hparams.structures_batches_for_protein_workshop,
+                ablate_af2_plddt=self.hparams.ablate_af2_plddt,
+                ablate_esm_embeddings=self.hparams.ablate_esm_embeddings,
             )
 
     @beartype
