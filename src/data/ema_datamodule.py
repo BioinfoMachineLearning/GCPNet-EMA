@@ -29,6 +29,7 @@ class EMADataModule(LightningDataModule):
         lddt_exec_path: Optional[str] = None,
         pdbtools_dir: Optional[str] = None,
         subset_to_ca_atoms_only: bool = False,
+        structures_batches_for_protein_workshop: bool = False,
         batch_size: int = 1,
         num_workers: int = 0,
         pin_memory: bool = True,
@@ -142,6 +143,7 @@ class EMADataModule(LightningDataModule):
                 lddt_exec_path=self.hparams.lddt_exec_path,
                 pdbtools_dir=self.hparams.pdbtools_dir,
                 subset_to_ca_atoms_only=self.hparams.subset_to_ca_atoms_only,
+                structures_batches_for_protein_workshop=self.hparams.structures_batches_for_protein_workshop,
             )
             self.data_val = EMADataset(
                 decoy_pdbs=valid_pdbs,
@@ -156,6 +158,7 @@ class EMADataModule(LightningDataModule):
                 lddt_exec_path=self.hparams.lddt_exec_path,
                 pdbtools_dir=self.hparams.pdbtools_dir,
                 subset_to_ca_atoms_only=self.hparams.subset_to_ca_atoms_only,
+                structures_batches_for_protein_workshop=self.hparams.structures_batches_for_protein_workshop,
             )
 
         if stage and stage == "test" and not self.data_test:
@@ -175,6 +178,7 @@ class EMADataModule(LightningDataModule):
                 lddt_exec_path=self.hparams.lddt_exec_path,
                 pdbtools_dir=self.hparams.pdbtools_dir,
                 subset_to_ca_atoms_only=self.hparams.subset_to_ca_atoms_only,
+                structures_batches_for_protein_workshop=self.hparams.structures_batches_for_protein_workshop,
             )
 
         if stage and stage == "predict":
@@ -196,6 +200,7 @@ class EMADataModule(LightningDataModule):
                 lddt_exec_path=self.hparams.lddt_exec_path,
                 pdbtools_dir=self.hparams.pdbtools_dir,
                 subset_to_ca_atoms_only=self.hparams.subset_to_ca_atoms_only,
+                structures_batches_for_protein_workshop=self.hparams.structures_batches_for_protein_workshop,
             )
 
     @beartype

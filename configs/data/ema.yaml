@@ -11,6 +11,7 @@ python_exec_path: # note: providing a value for `python_exec_path` is required w
 lddt_exec_path: # note: leaving `lddt_exec_path` as null will have the `ARDataset` run `lDDT` CLI-directly
 pdbtools_dir: # note: leaving `pdbtools_dir` as null will have the `ARDataset` run `pdb-tools` CLI-directly
 subset_to_ca_atoms_only: false # note: set to `true` to convert a model into its `*_residue` equivalent
+structures_batches_for_protein_workshop: true # note: set to `true` to make batch inputs directly compatible with ProteinWorkshop models
 batch_size: 1
 num_workers: 4
 pin_memory: false

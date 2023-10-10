@@ -247,28 +247,34 @@ class GCPNetEMALitModule(LightningModule):
         #     node_mask=batch.mask,
         # )
 
-        # embed node and edge input
-        batch.h = torch.cat((batch.h, self.atom_embedding(batch.atom_types)), dim=-1)
-        (h, chi), (e, xi) = self.gcp_embedding(batch)
+        # # embed node and edge input
+        # batch.h = torch.cat((batch.h, self.atom_embedding(batch.atom_types)), dim=-1)
+        # (h, chi), (e, xi) = self.gcp_embedding(batch)
 
-        # update graph features using a series of geometric message-passing layers
-        for layer in self.interaction_layers:
-            (h, chi) = layer((h, chi), (e, xi), batch.edge_index, batch.f_ij, node_mask=batch.mask)
+        # # update graph features using a series of geometric message-passing layers
+        # for layer in self.interaction_layers:
+        #     (h, chi) = layer((h, chi), (e, xi), batch.edge_index, batch.f_ij, node_mask=batch.mask)
 
-        # record final version of each feature in `Batch` object
-        batch.h, batch.chi, batch.e, batch.xi = h, chi, e, xi
+        # # record final version of each feature in `Batch` object
+        # batch.h, batch.chi, batch.e, batch.xi = h, chi, e, xi
 
-        # summarize intermediate node representations as final predictions
-        out = self.invariant_node_projection[0]((h, chi))  # e.g., GCPLayerNorm()
-        out = self.invariant_node_projection[1](
-            out, batch.edge_index, batch.f_ij, node_inputs=True, node_mask=batch.mask
-        )  # e.g., GCP((h, chi)) -> h'
-        res_out = scatter(
-            out[batch.mask], batch.atom_residue_idx[batch.mask], dim=0, reduce="mean"
-        )  # get batch-wise plDDT for each residue
-        res_out = self.dense(res_out).squeeze()
+        # # summarize intermediate node representations as final predictions
+        # out = self.invariant_node_projection[0]((h, chi))  # e.g., GCPLayerNorm()
+        # out = self.invariant_node_projection[1](
+        #     out, batch.edge_index, batch.f_ij, node_inputs=True, node_mask=batch.mask
+        # )  # e.g., GCP((h, chi)) -> h'
+        # res_out = scatter(
+        #     out[batch.mask], batch.atom_residue_idx[batch.mask], dim=0, reduce="mean"
+        # )  # get batch-wise plDDT for each residue
+        # res_out = self.dense(res_out).squeeze()
 
-        return batch, res_out
+        # featurize the input batch according to model requirements
+        batch = self.model.featurise(batch)
+
+        # make a forward pass with the model
+        out = self.model.forward(batch)
+
+        return batch, out
 
     def model_step(self, batch: Any) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Take a step with the model.

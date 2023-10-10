@@ -14,10 +14,12 @@ import pandas as pd
 import prody as pr
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch_cluster
 from beartype import beartype
 from beartype.typing import Any, Dict, List, Optional, Tuple, Union
 from biopandas.pdb import PandasPdb
+from graphein.protein.resi_atoms import STANDARD_AMINO_ACIDS
 from jaxtyping import Float, Int64, jaxtyped
 from sidechainnet.structure.build_info import NUM_COORDS_PER_RES
 from sidechainnet.utils.measure import get_seq_coords_and_angles
@@ -301,6 +303,7 @@ class EMADataset(Dataset):
         lddt_exec_path: Optional[str] = None,
         pdbtools_dir: Optional[str] = None,
         subset_to_ca_atoms_only: bool = False,
+        structures_batches_for_protein_workshop: bool = False,
     ):
         """Initializes a dataset of PDBs."""
         self.decoy_pdbs = decoy_pdbs
@@ -315,6 +318,7 @@ class EMADataset(Dataset):
         self.lddt_exec_path = lddt_exec_path
         self.pdbtools_dir = pdbtools_dir
         self.subset_to_ca_atoms_only = subset_to_ca_atoms_only
+        self.structures_batches_for_protein_workshop = structures_batches_for_protein_workshop
         self.num_pdbs = len(self.decoy_pdbs)
 
         os.makedirs(self.model_data_cache_dir, exist_ok=True)
@@ -538,6 +542,16 @@ class EMADataset(Dataset):
                         lddt_exec_path=lddt_exec_path,
                     )
 
+            # create Graphein/ProteinWorkshop-compatible residue type indices `Tensor`
+            protein_residue_types = torch.tensor(
+                [
+                    STANDARD_AMINO_ACIDS.index(s)
+                    for protein_sequence in protein_sequences
+                    for s in protein_sequence[-1]
+                ],
+                dtype=torch.long,
+            )
+
             # save protein data #
             protein_data = Data(
                 protein_atom_rep=protein_atom_representations,
@@ -547,6 +561,7 @@ class EMADataset(Dataset):
                 protein_ca_atom_idx=protein_ca_atom_idx,
                 protein_x=protein_coords,
                 protein_mask=protein_mask,
+                protein_residue_types=protein_residue_types,
                 protein_num_atoms=torch.tensor([len(protein_coords)]),
                 protein_decoy_alphafold_per_residue_plddt=af2_plddt_per_residue,
                 protein_decoy_per_residue_lddt=torch.from_numpy(lddt_per_residue)
@@ -623,6 +638,7 @@ class EMADataset(Dataset):
             ca_atom_idx=protein_data.protein_ca_atom_idx,
             x=protein_data.protein_x,
             mask=protein_data.protein_mask,
+            residue_types=protein_data.protein_residue_types,
             num_atoms=protein_data.protein_num_atoms,
             decoy_protein_alphafold_per_residue_plddt=protein_data.protein_decoy_alphafold_per_residue_plddt,
             decoy_protein_per_residue_lddt=getattr(
@@ -630,6 +646,27 @@ class EMADataset(Dataset):
             ),
         )
         return data, protein
+
+    @staticmethod
+    @beartype
+    def structure_data_for_protein_workshop(
+        data: Data,
+        coords_fill_value: float = 1e-5,
+    ) -> Data:
+        """Structure data for `ProteinWorkshop` models.
+
+        :param data: `Data` collection
+        :param coords_fill_value: coordinates fill value
+        :return: `Data` collection
+        """
+        restructured_data = Data()
+        data.coords = data.x.reshape(-1, 14, 3)[:, :4, :]
+        restructured_data.coords = F.pad(
+            data.coords, (0, 0, 0, 37 - data.coords.shape[1], 0, 0), value=coords_fill_value
+        )
+        restructured_data.residue_type = data.residue_types
+        restructured_data.label = getattr(data, "decoy_protein_per_residue_lddt", None)
+        return restructured_data
 
     @staticmethod
     @beartype
@@ -823,13 +860,16 @@ class EMADataset(Dataset):
         )
 
         # finalize graph features according to current graph topology and model specifications
-        data = self.finalize_graph_topology_and_features_within_data(
-            data,
-            edge_cutoff=self.edge_cutoff,
-            max_neighbors=self.max_neighbors,
-            rbf_edge_dist_cutoff=self.rbf_edge_dist_cutoff,
-            num_rbf=self.num_rbf,
-        )
+        if self.structures_batches_for_protein_workshop:
+            data = self.structure_data_for_protein_workshop(data)
+        else:
+            data = self.finalize_graph_topology_and_features_within_data(
+                data,
+                edge_cutoff=self.edge_cutoff,
+                max_neighbors=self.max_neighbors,
+                rbf_edge_dist_cutoff=self.rbf_edge_dist_cutoff,
+                num_rbf=self.num_rbf,
+            )
         if self.subset_to_ca_atoms_only:
             data = self.subset_data_to_ca_atoms_only(
                 data,
