@@ -26,7 +26,8 @@ model:
     weight_decay: 1e-5
   model_cfg:
     decoder:
-      dropout: 0.0
+      graph_regression:
+        dropout: 0.0
   compile: false
 
 data:
