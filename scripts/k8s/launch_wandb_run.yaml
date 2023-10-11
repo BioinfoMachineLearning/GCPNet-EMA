@@ -1,0 +1,65 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: run-gcpnet-ema
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: nvidia.com/gpu.product
+                    operator: In
+                    values:
+                      # NOTE: we select 24GB GPUs only here
+                      - NVIDIA-A10
+                      - NVIDIA-GeForce-RTX-3090
+                      - NVIDIA-TITAN-RTX
+                      - NVIDIA-RTX-A5000
+                      - Quadro-RTX-6000
+      containers:
+        - command:
+            - bash
+            - -c
+            - cd /data/Repositories/Lab_Repositories/GCPNet-EMA
+              && WANDB__SERVICE_WAIT=3600 /data/Repositories/Lab_Repositories/GCPNet-EMA/GCPNet-EMA/bin/python src/train.py
+              experiment=gcpnet_ema logger=wandb logger.wandb.id=8gs5e6hw logger.wandb.name=10112023_12_00_Run_GCPNet_EMA
+              hydra.run.dir=logs/train/runs/8gs5e6hw
+          env:
+            - name: NCCL_SOCKET_IFNAME
+              value: eth0
+            - name: NCCL_DEBUG
+              value: INFO
+          image: gitlab-registry.nrp-nautilus.io/bioinfomachinelearning/bio-diffusion:bb558b48
+          imagePullPolicy: IfNotPresent
+          name: bio-diffusion
+          ports:
+            - containerPort: 8880
+          resources:
+            limits:
+              cpu: 2
+              memory: 14Gi
+              nvidia.com/gpu: 1
+            requests:
+              cpu: 2
+              memory: 12Gi
+              nvidia.com/gpu: 1
+          volumeMounts:
+            - mountPath: /data
+              name: acmwhb-gcpnet-pvc-aux-11
+            - mountPath: /dev/shm
+              name: dshm
+          workingDir: /data/Repositories/Lab_Repositories/GCPNet-EMA
+      imagePullSecrets:
+        - name: regcred-bio-diffusion
+      restartPolicy: Never
+      volumes:
+        - name: acmwhb-gcpnet-pvc-aux-11
+          persistentVolumeClaim:
+            claimName: acmwhb-gcpnet-pvc-aux-11
+        - emptyDir:
+            medium: Memory
+          name: dshm

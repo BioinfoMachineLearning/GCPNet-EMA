@@ -14,7 +14,7 @@ defaults:
 
 tags: ["gcpnet_ema"]
 
-seed:
+seed: 6
 
 trainer:
   min_epochs: 1
@@ -36,4 +36,6 @@ data:
 logger:
   wandb:
     tags: ${tags}
-    group: "GCPNet-EMA"
+    group: "Run-GCPNet-EMA"
+
+test: true
