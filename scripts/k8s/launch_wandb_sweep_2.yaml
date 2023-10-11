@@ -52,7 +52,7 @@ spec:
           command:
             - bash
             - -c
-            - cd /data/Repositories/Lab_Repositories/GCPNet-EMA && git checkout main && git pull origin main
+            - cd /data/Repositories/Lab_Repositories/GCPNet-EMA
               && /data/Repositories/Lab_Repositories/GCPNet-EMA/GCPNet-EMA/bin/python -m wandb agent bml-lab/GCPNet-EMA/my_sweep_id
           env:
             - name: NCCL_SOCKET_IFNAME
