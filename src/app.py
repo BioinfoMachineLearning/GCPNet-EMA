@@ -68,7 +68,7 @@ def about():
 
 @app.route("/predict", methods=["POST"])
 def success():
-    """Hosts a prediction endpoint to make predictions with given checkpoint on a given datamodule
+    """Hosts an endpoint to make predictions with given checkpoint on a given datamodule
     predictset."""
     if request.method == "POST":
         global predict_cfg, model, plugins, strategy, trainer
