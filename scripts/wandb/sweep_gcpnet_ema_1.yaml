@@ -56,7 +56,7 @@ parameters:
   model.optimizer.weight_decay:
     values: [1e-5, 1e-3]
 
-  model.model_cfg.decoder.dropout:
+  model.model_cfg.decoder.graph_regression.dropout:
     values: [0.0, 0.5]
 
   model.compile:
