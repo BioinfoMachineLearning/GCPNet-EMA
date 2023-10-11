@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="px-3 py-3 text-center">
+            <h1 class="display-4">What is GCPNet-EMA?</h1>
+            <div class="my-2">
+                <img style="max-width: 900px; width: 100%;" src="{{ url_for('static', filename='img/GCPNet_for_Protein_Structure_EMA.png') }}" alt="">
+            </div>
+            <p>
+                GCPNet-EMA is an application that allows you to predict per-residue lDDT scores for computationally-predicted (e.g., AlphaFold 2)
+                protein structure decoys using GCPNet, our newly-developed graph neural network for learning efficiently from 3D biomolecular structures.
+            </p>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

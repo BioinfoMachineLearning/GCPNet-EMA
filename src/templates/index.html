@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+  <div class="col-sm-8 offset-sm-2">
+    <div class="pricing-header px-3 py-3 pt-md-5 pb-md-4 mx-auto text-center">
+      <h1 class="display-4">GCPNet-EMA for Fast Protein Structure EMA</h1>
+      <p class="lead">Predict per-residue lDDT scores for computationally-predicted (e.g., AlphaFold)
+        protein structures using GCPNet, our newly-developed graph neural network for learning efficiently from 3D biomolecular structures. <br> <a
+          href="https://github.com/BioinfoMachineLearning/GCPNet-EMA"> View on GitHub</a></p>
+    </div>
+  </div>
+</div>
+<div class="row">
+  <div class="mb-2 col-md-6 offset-md-3">
+    <form action="/predict" method="POST" enctype="multipart/form-data">
+      <div class="input-group">
+        <div class="custom-file">
+          <input type="file" name="file" accept=".jpg, .jpeg, .png" class="custom-file-input" id="inputGroupFile"
+            aria-describedby="inputGroupFileAddon04">
+          <label class="custom-file-label" for="inputGroupFile">Choose PDB file</label>
+        </div>
+        <div class="input-group-append">
+          <input type="submit" value="Upload"  class="btn btn-outline-secondary" type="button"
+            id="inputGroupFileAddon04" />
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="row">
+    <div class="col-sm-6 offset-sm-3 my-5">
+      <center>
+        <p class="text-muted">
+          By default, this application uses the latest version of GCPNet, GCPNet++, to make predictions
+          of the per-residue lDDT scores for each chain in a given PDB file.
+        </p>
+      </center>
+    </div>
+  </div>
+</div>
+{% endblock %}
