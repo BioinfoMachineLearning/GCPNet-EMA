@@ -1,3 +1,5 @@
+import ssl
+
 import hydra
 import rootutils
 from beartype.typing import Any, Dict, List, Tuple
@@ -54,6 +56,10 @@ def predict(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     :return: Tuple[dict, dict] with metrics and dict with all instantiated objects.
     """
     assert cfg.ckpt_path
+
+    if getattr(cfg, "create_unverified_ssl_context", False):
+        log.info("Creating unverified SSL context!")
+        ssl._create_default_https_context = ssl._create_unverified_context
 
     log.info(f"Instantiating datamodule <{cfg.data._target_}>")
     datamodule: LightningDataModule = hydra.utils.instantiate(cfg.data)

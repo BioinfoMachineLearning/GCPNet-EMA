@@ -1,4 +1,5 @@
 import os
+import ssl
 
 import hydra
 import lightning as L
@@ -59,6 +60,10 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     :param cfg: A DictConfig configuration composed by Hydra.
     :return: A tuple with metrics and dict with all instantiated objects.
     """
+    if getattr(cfg, "create_unverified_ssl_context", False):
+        log.info("Creating unverified SSL context!")
+        ssl._create_default_https_context = ssl._create_unverified_context
+
     # set seed for random number generators in pytorch, numpy and python.random
     if cfg.get("seed"):
         L.seed_everything(cfg.seed, workers=True)

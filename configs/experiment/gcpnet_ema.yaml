@@ -41,3 +41,5 @@ logger:
     name: ${now:%Y-%m-%d}_${now:%H-%M-%S}_GCPNet-EMA
 
 test: true
+
+create_unverified_ssl_context: true

@@ -77,6 +77,9 @@ parameters:
   test:
     value: True
 
+  create_unverified_ssl_context:
+    value: True
+
 command:
   - ${env}
   - HYDRA_FULL_ERROR=1
