@@ -68,7 +68,8 @@ def about():
 
 @app.route("/predict", methods=["POST"])
 def success():
-    """Hosts an endpoint to make predictions for a given PDB file using a trained checkpoint."""
+    """Hosts an endpoint to make predictions for a given PDB file using a pre-trained
+    checkpoint."""
     if request.method == "POST":
         global predict_cfg, model, plugins, strategy, trainer
         f = request.files["file"]
