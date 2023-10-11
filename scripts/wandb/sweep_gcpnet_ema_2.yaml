@@ -24,11 +24,17 @@ parameters:
   logger:
     value: wandb
 
-  logger.wandb.tags:
-    value: "gcpnet_ema"
+  logger.wandb.entity:
+    value: bml-lab
 
   logger.wandb.group:
+    value: "Sweep-GCPNet-EMA"
+
+  logger.wandb.project:
     value: "GCPNet-EMA"
+
+  logger.wandb.tags:
+    value: "gcpnet_ema"
 
   model:
     value: gcpnet_ema
