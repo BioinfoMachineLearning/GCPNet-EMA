@@ -53,7 +53,7 @@ spec:
             - bash
             - -c
             - cd /data/Repositories/Lab_Repositories/GCPNet-EMA
-              && /data/Repositories/Lab_Repositories/GCPNet-EMA/GCPNet-EMA/bin/python -m wandb agent bml-lab/GCPNet-EMA/5u2om9ua
+              && /data/Repositories/Lab_Repositories/GCPNet-EMA/GCPNet-EMA/bin/python -m wandb agent bml-lab/GCPNet-EMA/pfai3zdm
           env:
             - name: NCCL_SOCKET_IFNAME
               value: eth0
