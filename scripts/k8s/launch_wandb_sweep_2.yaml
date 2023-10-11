@@ -59,6 +59,11 @@ spec:
               value: eth0
             - name: NCCL_DEBUG
               value: INFO
+            - name: WANDB_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: acmwhb-wandb-secret
+                  key: secret
       imagePullSecrets:
         - name: regcred-bio-diffusion
       restartPolicy: Always

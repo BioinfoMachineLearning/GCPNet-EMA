@@ -150,6 +150,7 @@ configs/local/default.yaml
 /data/
 /logs/
 .env
+scripts/wandb/wandb_key_secret.yaml
 
 # Aim logging
 .aim
