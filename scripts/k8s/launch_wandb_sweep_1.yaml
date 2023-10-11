@@ -9,7 +9,6 @@ spec:
   selector:
     matchLabels:
       k8s-app: sweep-gcpnet-ema-1
-  backoffLimit: 0
   template:
     metadata:
       labels:
@@ -54,7 +53,7 @@ spec:
             - bash
             - -c
             - cd /data/Repositories/Lab_Repositories/GCPNet-EMA && git checkout main && git pull origin main
-              && /data/Repositories/Lab_Repositories/GCPNet-EMA/GCPNet-EMA/bin/python -m wandb agent $my_sweep_id
+              && /data/Repositories/Lab_Repositories/GCPNet-EMA/GCPNet-EMA/bin/python -m wandb agent gltb9hw9
           env:
             - name: NCCL_SOCKET_IFNAME
               value: eth0
@@ -62,7 +61,7 @@ spec:
               value: INFO
       imagePullSecrets:
         - name: regcred-bio-diffusion
-      restartPolicy: Never
+      restartPolicy: Always
       volumes:
         - name: acmwhb-gcpnet-pvc-aux-11
           persistentVolumeClaim:

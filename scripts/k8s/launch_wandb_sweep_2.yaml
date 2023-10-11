@@ -9,7 +9,6 @@ spec:
   selector:
     matchLabels:
       k8s-app: sweep-gcpnet-ema-2
-  backoffLimit: 0
   template:
     metadata:
       labels:
@@ -62,7 +61,7 @@ spec:
               value: INFO
       imagePullSecrets:
         - name: regcred-bio-diffusion
-      restartPolicy: Never
+      restartPolicy: Always
       volumes:
         - name: acmwhb-gcpnet-pvc-aux-11
           persistentVolumeClaim:
