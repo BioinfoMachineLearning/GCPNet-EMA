@@ -33,6 +33,11 @@ spec:
               value: eth0
             - name: NCCL_DEBUG
               value: INFO
+            - name: WANDB_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: acmwhb-wandb-secret
+                  key: secret
           image: gitlab-registry.nrp-nautilus.io/bioinfomachinelearning/bio-diffusion:bb558b48
           imagePullPolicy: IfNotPresent
           name: bio-diffusion
