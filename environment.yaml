@@ -169,6 +169,7 @@ dependencies:
       - bioservices==1.11.2
       - biotite==0.37.0
       - blessed==1.20.0
+      - blinker==1.6.3
       - cattrs==23.1.2
       - cliff==4.3.0
       - cmaes==0.10.0
@@ -188,6 +189,7 @@ dependencies:
       - fair-esm==2.0.0
       - fastapi==0.103.2
       - fastcore==1.5.29
+      - flask==3.0.0
       - foldcomp==0.0.5
       - fonttools==4.43.1
       - frozenlist==1.4.0
@@ -295,6 +297,7 @@ dependencies:
       - wcwidth==0.2.8
       - websocket-client==1.6.3
       - websockets==11.0.3
+      - werkzeug==3.0.0
       - wget==3.2
       - wrapt==1.15.0
       - xarray==2023.9.0

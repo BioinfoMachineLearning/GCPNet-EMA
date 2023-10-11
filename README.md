@@ -185,6 +185,12 @@ diff environment.yaml env.yaml # note the differences and copy accepted changes 
 rm env.yaml # clean up temporary environment file
 ```
 
+Run the Flask web server locally on a specific port
+
+```bash
+flask run -p <port>
+```
+
 ## Acknowledgements
 
 GCPNet-EMA builds upon the source code and data from the following project(s):
