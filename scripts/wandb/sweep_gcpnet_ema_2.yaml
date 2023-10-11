@@ -78,6 +78,7 @@ parameters:
     value: True
 
 command:
+  - ${env}
   - HYDRA_FULL_ERROR=1
   - WANDB_START_METHOD=thread
   - /data/Repositories/Lab_Repositories/GCPNet-EMA/GCPNet-EMA/bin/python
