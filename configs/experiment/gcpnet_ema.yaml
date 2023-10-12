@@ -31,8 +31,8 @@ model:
   compile: false
 
 data:
-  batch_size: 4
-  num_workers: 4
+  batch_size: 16
+  num_workers: 1
 
 logger:
   wandb:
