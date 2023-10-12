@@ -851,11 +851,16 @@ class EMADataset(Dataset):
         pdb_id = decoy_pdb_path.stem
 
         protein_data_filepath = Path(self.model_data_cache_dir) / f"{pdb_id}.pt"
-        protein_data = (
-            torch.load(protein_data_filepath)
-            if os.path.exists(str(protein_data_filepath))
-            else None
-        )
+        try:
+            protein_data = (
+                torch.load(protein_data_filepath)
+                if os.path.exists(str(protein_data_filepath))
+                else None
+            )
+        except Exception:
+            # NOTE: indicates `protein_data_filepath` was corrupted
+            protein_data = None
+            os.remove(protein_data_filepath)
 
         protein_chain_ids = (
             # note: the current version of Pandas ensures that `unique()` preserves ordering in a `pd.Series`
