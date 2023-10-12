@@ -1,0 +1,4 @@
+splits_dir: data/EMA/splits
+decoy_dir: data/EMA/decoy_model
+true_dir: data/EMA/true_model
+lddt_exec_path: /data/Repositories/Lab_Repositories/GCPNet-EMA/GCPNet-EMA/bin/lddt

@@ -149,6 +149,7 @@ configs/local/default.yaml
 /checkpoints/structure_denoising/
 /data/
 /logs/
+/outputs/
 .env
 scripts/wandb/wandb_key_secret.yaml
 
