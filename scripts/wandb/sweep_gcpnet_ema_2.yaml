@@ -13,7 +13,7 @@ parameters:
     value: ema
 
   data.batch_size:
-    values: [8, 16]
+    values: [16, 32]
 
   data.num_workers:
     value: 4
