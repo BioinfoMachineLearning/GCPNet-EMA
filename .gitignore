@@ -145,12 +145,13 @@ dmypy.json
 *.tar.gz
 
 # GCPNet-EMA
-configs/local/default.yaml
 /checkpoints/structure_denoising/
 /data/
 /logs/
 /outputs/
 .env
+checkpoints/*finetuned*.ckpt
+configs/local/default.yaml
 scripts/wandb/wandb_key_secret.yaml
 
 # Aim logging
