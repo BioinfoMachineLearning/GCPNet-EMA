@@ -5,7 +5,7 @@ metadata:
   labels:
     k8s-app: sweep-gcpnet-ema-2
 spec:
-  replicas: 4
+  replicas: 8
   selector:
     matchLabels:
       k8s-app: sweep-gcpnet-ema-2
@@ -36,12 +36,12 @@ spec:
             - containerPort: 8880
           resources:
             limits:
-              cpu: 2
-              memory: 14Gi
+              cpu: 1
+              memory: 10Gi
               nvidia.com/gpu: 1
             requests:
-              cpu: 2
-              memory: 12Gi
+              cpu: 1
+              memory: 8Gi
               nvidia.com/gpu: 1
           volumeMounts:
             - mountPath: /data

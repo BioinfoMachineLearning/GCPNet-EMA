@@ -5,7 +5,7 @@ metadata:
   labels:
     k8s-app: sweep-gcpnet-ema-1
 spec:
-  replicas: 4
+  replicas: 8
   selector:
     matchLabels:
       k8s-app: sweep-gcpnet-ema-1
@@ -36,12 +36,12 @@ spec:
             - containerPort: 8880
           resources:
             limits:
-              cpu: 2
-              memory: 14Gi
+              cpu: 1
+              memory: 10Gi
               nvidia.com/gpu: 1
             requests:
-              cpu: 2
-              memory: 12Gi
+              cpu: 1
+              memory: 8Gi
               nvidia.com/gpu: 1
           volumeMounts:
             - mountPath: /data
@@ -53,7 +53,7 @@ spec:
             - bash
             - -c
             - cd /data/Repositories/Lab_Repositories/GCPNet-EMA
-              && /data/Repositories/Lab_Repositories/GCPNet-EMA/GCPNet-EMA/bin/python -m wandb agent bml-lab/GCPNet-EMA/yjyewtqx
+              && /data/Repositories/Lab_Repositories/GCPNet-EMA/GCPNet-EMA/bin/python -m wandb agent bml-lab/GCPNet-EMA/w8u37glo
           env:
             - name: NCCL_SOCKET_IFNAME
               value: eth0

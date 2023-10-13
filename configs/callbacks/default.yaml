@@ -16,7 +16,7 @@ model_checkpoint:
 
 early_stopping:
   monitor: "val/PerModelPearsonCorrCoef"
-  patience: 50
+  patience: 100
   mode: "max"
 
 model_summary:

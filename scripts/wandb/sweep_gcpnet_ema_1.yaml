@@ -16,7 +16,7 @@ parameters:
     value: 16
 
   data.num_workers:
-    value: 1
+    value: 4
 
   extras.enforce_tags:
     value: False
@@ -34,7 +34,7 @@ parameters:
     value: "GCPNet-EMA"
 
   logger.wandb.tags:
-    value: "gcpnet_ema"
+    value: "gcpnetema"
 
   model:
     value: gcpnet_ema
@@ -54,10 +54,16 @@ parameters:
     values: [1e-4, 3e-4]
 
   model.optimizer.weight_decay:
-    value: 1e-5
+    values: [1e-5, 1e-4]
 
   model.model_cfg.decoder.graph_regression.dropout:
     values: [0.0, 0.25]
+
+  model.model_cfg.decoder.graph_regression.hidden_dim:
+    value: [1024, 1024, 1024, 1024]
+
+  model.model_cfg.decoder.graph_regression.activations:
+    value: ["relu", "relu", "relu", "relu", "none"]
 
   model.compile:
     value: False
