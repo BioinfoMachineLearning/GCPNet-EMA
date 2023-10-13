@@ -6,7 +6,7 @@ import hydra
 import pandas as pd
 import rootutils
 from beartype.typing import Any, Dict, Optional, Tuple
-from flask import Flask, render_template, request
+from flask import Flask, make_response, render_template, request
 from lightning import LightningDataModule, LightningModule, Trainer
 from lightning.fabric.plugins.environments.cluster_environment import ClusterEnvironment
 from lightning.pytorch.strategies.strategy import Strategy
@@ -84,16 +84,28 @@ def success():
             predict_cfg.data.predict_output_dir = predict_output_dir
         shutil.move(save_location, new_save_location)
         predict(predict_cfg)
-        global_plddt = (
-            pd.read_csv(trainer.model.predictions_csv_path)["global_plddt"].iloc[-1].item()
-        )
+        prediction_df = pd.read_csv(trainer.model.predictions_csv_path)
+        annotated_pdb_filepath = prediction_df["predicted_annotated_pdb_filepath"].iloc[-1]
+        global_plddt = prediction_df["global_plddt"].iloc[-1].item()
         shutil.rmtree(predict_input_dir)
         shutil.rmtree(predict_output_dir)
         return render_template(
             "prediction.html",
-            predictions_csv_path=trainer.model.predictions_csv_path,
+            annotated_pdb_name=os.path.basename(annotated_pdb_filepath),
             global_plddt=f"{global_plddt:.2f}",
         )
+
+
+@app.route("/download_prediction/<filename>")
+def download_prediction(filename: str):
+    """Hosts an endpoint to download predicted PDB annotations previously made for an input PDB
+    file."""
+    filepath = os.path.join(tempfile.gettempdir(), filename)
+    pdb_file = open(filepath)
+    response = make_response(pdb_file.read())
+    response.headers["Content-Disposition"] = f"attachment; filename={filename}"
+    response.headers["Content-Type"] = "chemical/x-pdb"
+    return response
 
 
 @task_wrapper

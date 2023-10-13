@@ -1,10 +1,29 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<style>
+    /* Style for the download button */
+    .download-button {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: #007BFF; /* Change this to your desired color */
+        color: #fff;
+        text-decoration: none;
+        border-radius: 5px;
+        font-weight: bold;
+        margin-bottom: 30px;
+    }
+
+    /* Hover effect */
+    .download-button:hover {
+        background-color: #0056b3; /* Darker shade of your desired color */
+    }
+</style>
 
 <div class="pricing-header px-3 py-3 pt-md-5 pb-md-4 mx-auto text-center">
-    <p class="lead">File uploaded successfully. Per-residue PDB-annotated predictions and metadata for the PDB file provided have been saved to:</p>
-    <p class="mt-3"><strong>{{predictions_csv_path}}</strong></p>
+    <p class="lead">Predictions were successful.</p>
+    <p class="lead">Per-residue plDDTs in the form of B-factor PDB annotations are available for download:</p>
+    <a href="{{ url_for('download_prediction', filename=annotated_pdb_name) }}" class="download-button">Download</a>
     <p class="lead">Residue-averaged global plDDT:</p>
     <p class="mt-3"><strong><u>{{global_plddt}}</u>%</strong></p>
     <p class="mt-5"> <a href="/">Predict for a new PDB file</a></p>
