@@ -10,7 +10,8 @@ from email.mime.text import MIMEText
 import hydra
 import pandas as pd
 import rootutils
-from beartype.typing import Any, Dict, Optional, Tuple
+from beartype import beartype
+from beartype.typing import Any, Dict, List, Optional, Tuple
 from flask import Flask, jsonify, make_response, render_template, request
 from lightning import LightningDataModule, LightningModule, Trainer
 from lightning.fabric.plugins.environments.cluster_environment import ClusterEnvironment
@@ -125,8 +126,7 @@ def predict_and_send_email():
         results_email = request.form.get("Results Email")
         other_parameters = request.form.get("Other Parameters")
 
-        # perform the prediction using your deep learning model
-        # replace this with your actual prediction code
+        # make predictions
         save_location = structure_upload.filename
         structure_upload.save(save_location)
         os.makedirs(predict_input_dir, exist_ok=True)
@@ -143,38 +143,45 @@ def predict_and_send_email():
         shutil.rmtree(predict_input_dir)
         shutil.rmtree(predict_output_dir)
 
-        # create and save the final PDB file
-        # replace `output.pdb` with the actual file name you generate
-        output_file = annotated_pdb_filepath
+        @beartype
+        def send_email(
+            subject: str,
+            body: str,
+            sender: str,
+            recipients: List[str],
+            password: str,
+            output_file: str,
+        ):
+            # craft message
+            msg = MIMEMultipart()
+            msg["Subject"] = subject
+            msg["From"] = sender
+            msg["To"] = ", ".join(recipients)
+            msg.attach(MIMEText(body, "plain"))
+            # craft attachment
+            with open(output_file, "rb") as attachment:
+                part = MIMEBase("application", "octet-stream")
+                part.set_payload(attachment.read())
+            encoders.encode_base64(part)
+            part.add_header(
+                "Content-Disposition",
+                f"attachment; filename= {os.path.basename(output_file)}",
+            )
+            msg.attach(part)
+            # send email with message and attachment
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp_server:
+                smtp_server.login(sender, password)
+                smtp_server.sendmail(sender, recipients, msg.as_string())
 
-        # send the PDB file as an email attachment
-        msg = MIMEMultipart()
-        msg["From"] = os.environ["SERVER_EMAIL_ADDRESS"]  # NOTE: replace with your email address
-        msg["To"] = results_email
-        msg["Subject"] = title
-
-        body = "job complete"
-
-        msg.attach(MIMEText(body, "plain"))
-
-        attachment = open(output_file, "rb")
-        part = MIMEBase("application", "octet-stream")
-        part.set_payload((attachment).read())
-        encoders.encode_base64(part)
-        part.add_header(
-            "Content-Disposition", "attachment; filename= %s" % os.path.basename(output_file)
+        # send the annotated PDB file as an email attachment
+        send_email(
+            subject=title,
+            body="job complete",
+            sender=os.environ["SERVER_EMAIL_ADDRESS"],
+            recipients=[results_email],
+            password=os.environ["SERVER_EMAIL_PASSWORD"],
+            output_file=annotated_pdb_filepath,
         )
-
-        msg.attach(part)
-
-        server = smtplib.SMTP("smtp.gmail.com", 587)
-        server.starttls()
-        server.login(
-            os.environ["SERVER_EMAIL_ADDRESS"], os.environ["SERVER_EMAIL_PASSWORD"]
-        )  # NOTE: replace with your email address and password
-        text = msg.as_string()
-        server.sendmail(os.environ["SERVER_EMAIL_ADDRESS"], results_email, text)
-        server.quit()
 
         return jsonify({"message": "Prediction completed and email sent."})
 
