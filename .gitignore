@@ -147,9 +147,11 @@ dmypy.json
 # GCPNet-EMA
 /checkpoints/structure_denoising/
 /data/
+/lightning_logs/
 /logs/
 /outputs/
 .env
+*.csv*
 checkpoints/*finetuned*.ckpt
 configs/local/default.yaml
 scripts/wandb/wandb_key_secret.yaml

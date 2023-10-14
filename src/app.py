@@ -2,6 +2,7 @@ import os
 import shutil
 import smtplib
 import tempfile
+import uuid
 from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
@@ -13,6 +14,8 @@ import rootutils
 from beartype import beartype
 from beartype.typing import Any, Dict, List, Optional, Tuple
 from flask import Flask, jsonify, make_response, render_template, request
+from hydra.core.global_hydra import GlobalHydra
+from hydra.core.hydra_config import HydraConfig
 from lightning import LightningDataModule, LightningModule, Trainer
 from lightning.fabric.plugins.environments.cluster_environment import ClusterEnvironment
 from lightning.pytorch.strategies.strategy import Strategy
@@ -43,14 +46,26 @@ from src import (
     register_custom_omegaconf_resolvers as src_register_custom_omegaconf_resolvers,
 )
 from src import resolve_omegaconf_variable
-from src.utils import RankedLogger, extras, task_wrapper
+from src.utils import RankedLogger, task_wrapper
 
 log = RankedLogger(__name__, rank_zero_only=True)
 
 app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = "uploads"
 
-predict_cfg: Optional[DictConfig] = None
+GlobalHydra.instance().clear()
+
+register_custom_omegaconf_resolvers()
+src_register_custom_omegaconf_resolvers()
+
+# load configuration using Hydra
+config_dir = "../configs"  # adjust the path to your configuration directory
+config_name = "app.yaml"  # adjust the configuration file name
+hydra.initialize(config_dir, version_base="1.3")
+cfg = hydra.compose(config_name=config_name, return_hydra_config=True)
+HydraConfig().cfg = cfg
+
+predict_cfg: DictConfig = cfg
 model: Optional[LightningModule] = None
 plugins: Optional[ClusterEnvironment] = None
 strategy: Optional[Strategy] = None
@@ -127,21 +142,26 @@ def predict_and_send_email():
         other_parameters = request.form.get("Other Parameters")
 
         # make predictions
-        save_location = structure_upload.filename
+        unique_id = str(uuid.uuid4())
+        predict_input_dir_ = os.path.join(predict_input_dir, f"{title}_{unique_id}")
+        predict_output_dir_ = os.path.join(predict_output_dir, f"{title}_{unique_id}")
+        os.makedirs(predict_input_dir_, exist_ok=True)
+        os.makedirs(predict_output_dir_, exist_ok=True)
+        save_location = os.path.join(
+            predict_input_dir_, f"{unique_id}_{structure_upload.filename}"
+        )
+        new_save_location = os.path.join(predict_input_dir_, os.path.basename(save_location))
         structure_upload.save(save_location)
-        os.makedirs(predict_input_dir, exist_ok=True)
-        os.makedirs(predict_output_dir, exist_ok=True)
-        new_save_location = os.path.join(predict_input_dir, os.path.basename(save_location))
         with open_dict(predict_cfg):
-            predict_cfg.data.predict_input_dir = predict_input_dir
+            predict_cfg.data.predict_input_dir = predict_input_dir_
             predict_cfg.data.predict_true_dir = None
-            predict_cfg.data.predict_output_dir = predict_output_dir
+            predict_cfg.data.predict_output_dir = predict_output_dir_
         shutil.move(save_location, new_save_location)
         predict(predict_cfg)
         prediction_df = pd.read_csv(trainer.model.predictions_csv_path)
         annotated_pdb_filepath = prediction_df["predicted_annotated_pdb_filepath"].iloc[-1]
-        shutil.rmtree(predict_input_dir)
-        shutil.rmtree(predict_output_dir)
+        shutil.rmtree(predict_input_dir_)
+        shutil.rmtree(predict_output_dir_)
 
         @beartype
         def send_email(
@@ -289,26 +309,5 @@ def predict(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     return metric_dict, object_dict
 
 
-@hydra.main(version_base="1.3", config_path="../configs", config_name="app.yaml")
-def main(cfg: DictConfig) -> None:
-    """Main entry point for prediction.
-
-    :param cfg: DictConfig configuration composed by Hydra.
-    """
-    # apply extra utilities
-    # (e.g. ask for tags if none are provided in cfg, print cfg tree, etc.)
-    extras(cfg)
-
-    global predict_cfg
-    if predict_cfg is None:
-        predict_cfg = cfg
-
-    app.debug = True
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)  # nosec
-
-
 if __name__ == "__main__":
-    register_custom_omegaconf_resolvers()
-    src_register_custom_omegaconf_resolvers()
-    main()
+    app.run(host="0.0.0.0", port=os.environ.get("PORT", 5000))  # nosec
