@@ -1,0 +1,34 @@
+# @package _global_
+
+defaults:
+  - data: ema # choose datamodule with `predict_dataloader()` for prediction
+  - model: gcpnet_ema
+  - logger: null
+  - strategy: default
+  - trainer: default
+  - paths: default
+  - extras: default
+  - hydra: default
+  - environment: default
+  - _self_
+
+task_name: "app"
+
+tags: ["dev"]
+
+seed: 42
+
+# arguments to override
+data:
+  predict_batch_size: 1
+  num_workers: 0
+  python_exec_path: /home/acmwhb/mambaforge/envs/GCPNet-EMA/bin/python
+  lddt_exec_path: /home/acmwhb/mambaforge/envs/GCPNet-EMA/bin/lddt
+  pdbtools_dir: /home/acmwhb/mambaforge/envs/GCPNet-EMA/lib/python3.10/site-packages/pdbtools/
+  structures_batches_for_protein_workshop: true
+  ablate_af2_plddt: false
+  ablate_esm_embeddings: false
+logger: csv
+trainer:
+  accelerator: cpu
+ckpt_path: checkpoints/structure_ema_finetuned_gcpnet_wvubt745_best_epoch_048.ckpt

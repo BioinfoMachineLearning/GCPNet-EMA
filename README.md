@@ -185,10 +185,16 @@ diff environment.yaml env.yaml # note the differences and copy accepted changes 
 rm env.yaml # clean up temporary environment file
 ```
 
-Run the Flask web server locally on a specific port
+Run the `Flask` web server locally on a specific port (e.g., `5000`)
 
 ```bash
-flask run -p <port>
+flask run -p 5000
+```
+
+Use `Gunicorn` to parallelize responses to web server requests across `4` workers
+
+```bash
+gunicorn -w 4 -b 0.0.0.0:5000 src/app:app
 ```
 
 ## Acknowledgements
