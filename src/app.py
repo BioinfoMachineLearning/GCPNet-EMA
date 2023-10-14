@@ -1,12 +1,17 @@
 import os
 import shutil
+import smtplib
 import tempfile
+from email import encoders
+from email.mime.base import MIMEBase
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 import hydra
 import pandas as pd
 import rootutils
 from beartype.typing import Any, Dict, Optional, Tuple
-from flask import Flask, make_response, render_template, request
+from flask import Flask, jsonify, make_response, render_template, request
 from lightning import LightningDataModule, LightningModule, Trainer
 from lightning.fabric.plugins.environments.cluster_environment import ClusterEnvironment
 from lightning.pytorch.strategies.strategy import Strategy
@@ -106,6 +111,75 @@ def download_prediction(filename: str):
     response.headers["Content-Disposition"] = f"attachment; filename={filename}"
     response.headers["Content-Type"] = "chemical/x-pdb"
     return response
+
+
+@app.route("/server_predict", methods=["POST"])
+def predict_and_send_email():
+    try:
+        global predict_cfg, model, plugins, strategy, trainer
+
+        # extract input parameters from the request
+        title = request.form.get("Title")
+        structure_upload = request.files["Structure Upload"]
+        sequence = request.form.get("Sequence")
+        results_email = request.form.get("Results Email")
+        other_parameters = request.form.get("Other Parameters")
+
+        # perform the prediction using your deep learning model
+        # replace this with your actual prediction code
+        save_location = structure_upload.filename
+        structure_upload.save(save_location)
+        os.makedirs(predict_input_dir, exist_ok=True)
+        os.makedirs(predict_output_dir, exist_ok=True)
+        new_save_location = os.path.join(predict_input_dir, os.path.basename(save_location))
+        with open_dict(predict_cfg):
+            predict_cfg.data.predict_input_dir = predict_input_dir
+            predict_cfg.data.predict_true_dir = None
+            predict_cfg.data.predict_output_dir = predict_output_dir
+        shutil.move(save_location, new_save_location)
+        predict(predict_cfg)
+        prediction_df = pd.read_csv(trainer.model.predictions_csv_path)
+        annotated_pdb_filepath = prediction_df["predicted_annotated_pdb_filepath"].iloc[-1]
+        shutil.rmtree(predict_input_dir)
+        shutil.rmtree(predict_output_dir)
+
+        # create and save the final PDB file
+        # replace `output.pdb` with the actual file name you generate
+        output_file = annotated_pdb_filepath
+
+        # send the PDB file as an email attachment
+        msg = MIMEMultipart()
+        msg["From"] = os.environ["SERVER_EMAIL_ADDRESS"]  # NOTE: replace with your email address
+        msg["To"] = results_email
+        msg["Subject"] = title
+
+        body = "job complete"
+
+        msg.attach(MIMEText(body, "plain"))
+
+        attachment = open(output_file, "rb")
+        part = MIMEBase("application", "octet-stream")
+        part.set_payload((attachment).read())
+        encoders.encode_base64(part)
+        part.add_header(
+            "Content-Disposition", "attachment; filename= %s" % os.path.basename(output_file)
+        )
+
+        msg.attach(part)
+
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.starttls()
+        server.login(
+            os.environ["SERVER_EMAIL_ADDRESS"], os.environ["SERVER_EMAIL_PASSWORD"]
+        )  # NOTE: replace with your email address and password
+        text = msg.as_string()
+        server.sendmail(os.environ["SERVER_EMAIL_ADDRESS"], results_email, text)
+        server.quit()
+
+        return jsonify({"message": "Prediction completed and email sent."})
+
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
 
 @task_wrapper
