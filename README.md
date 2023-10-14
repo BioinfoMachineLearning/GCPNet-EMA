@@ -194,7 +194,8 @@ flask run -p 5000
 Use `Gunicorn` to parallelize responses to web server requests across `4` workers
 
 ```bash
-gunicorn -w 4 -b 0.0.0.0:5000 src/app:app
+cd src/ # NOTE: must be working out of the project's `src` directory
+gunicorn -w 4 -b 0.0.0.0:5000 app:app
 ```
 
 ## Acknowledgements
