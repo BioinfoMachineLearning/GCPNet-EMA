@@ -37,11 +37,11 @@ spec:
           resources:
             limits:
               cpu: 1
-              memory: 10Gi
+              memory: 8Gi
               nvidia.com/gpu: 1
             requests:
               cpu: 1
-              memory: 8Gi
+              memory: 6Gi
               nvidia.com/gpu: 1
           volumeMounts:
             - mountPath: /data

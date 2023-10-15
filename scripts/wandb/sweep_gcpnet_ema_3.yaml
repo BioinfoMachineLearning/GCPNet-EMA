@@ -54,16 +54,16 @@ parameters:
     values: [1e-4, 3e-4]
 
   model.optimizer.weight_decay:
-    values: [1e-5, 1e-4]
+    values: [0, 1e-5]
 
   model.model_cfg.decoder.graph_regression.dropout:
     values: [0.0, 0.25]
 
   model.model_cfg.decoder.graph_regression.hidden_dim:
-    value: [1024, 1024, 1024, 1024]
+    value: [512, 512, 512]
 
   model.model_cfg.decoder.graph_regression.activations:
-    value: ["relu", "relu", "relu", "relu", "none"]
+    value: ["relu", "relu", "relu", "none"]
 
   model.compile:
     value: False

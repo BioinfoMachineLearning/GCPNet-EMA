@@ -8,16 +8,16 @@ defaults:
 model_checkpoint:
   dirpath: ${paths.output_dir}/checkpoints
   filename: "epoch_{epoch:03d}"
-  monitor: "val/PerModelPearsonCorrCoef"
-  mode: "max"
+  monitor: "val/loss"
+  mode: "min"
   save_last: True
   auto_insert_metric_name: False
   save_top_k: 3
 
 early_stopping:
-  monitor: "val/PerModelPearsonCorrCoef"
-  patience: 100
-  mode: "max"
+  monitor: "val/loss"
+  patience: 50
+  mode: "min"
 
 model_summary:
   max_depth: -1
