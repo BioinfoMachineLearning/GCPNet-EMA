@@ -9,6 +9,8 @@
 <!-- [![Paper](http://img.shields.io/badge/paper-arxiv.1001.2234-B31B1B.svg)](https://www.nature.com/articles/nature14539)
 [![Conference](http://img.shields.io/badge/AnyConference-year-4b44ce.svg)](https://papers.nips.cc/paper/2020) -->
 
+![GCP_Architecture.png](./img/GCPNet_for_Protein_Structure_EMA.png)
+
 </div>
 
 ## Description
@@ -198,6 +200,7 @@ GCPNet-EMA builds upon the source code and data from the following project(s):
 - [EnQA](https://github.com/BioinfoMachineLearning/EnQA)
 - [GCPNet](https://github.com/BioinfoMachineLearning/GCPNet)
 - [lightning-hydra-template](https://github.com/ashleve/lightning-hydra-template)
+- [ProteinWorkshop](https://github.com/a-r-j/ProteinWorkshop)
 
 We thank all their contributors and maintainers!
 
