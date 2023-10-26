@@ -14,12 +14,10 @@ spec:
                   - key: nvidia.com/gpu.product
                     operator: In
                     values:
-                      # NOTE: we select 24GB GPUs only here
-                      - NVIDIA-A10
-                      - NVIDIA-GeForce-RTX-3090
-                      - NVIDIA-TITAN-RTX
-                      - NVIDIA-RTX-A5000
-                      - Quadro-RTX-6000
+                      # NOTE: we select 48GB GPUs only here
+                      - NVIDIA-A40
+                      - NVIDIA-RTX-A6000
+                      - Quadro-RTX-8000
       containers:
         - command:
             - bash
@@ -46,11 +44,11 @@ spec:
           resources:
             limits:
               cpu: 2
-              memory: 14Gi
+              memory: 32Gi
               nvidia.com/gpu: 1
             requests:
               cpu: 2
-              memory: 12Gi
+              memory: 32Gi
               nvidia.com/gpu: 1
           volumeMounts:
             - mountPath: /data
