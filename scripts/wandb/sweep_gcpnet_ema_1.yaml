@@ -40,7 +40,7 @@ parameters:
     value: gcpnet_ema
 
   model.ablate_gtn:
-    value: True
+    value: False
 
   # NOTE: we want to load the pre-trained encoder weights
   model.model_cfg.finetune.encoder.load_weights:
@@ -57,7 +57,7 @@ parameters:
     values: [1e-5, 3e-5, 1e-4, 3e-4]
 
   model.optimizer.weight_decay:
-    value: 0
+    value: 0.0
 
   model.model_cfg.decoder.graph_regression.dropout:
     value: 0.0
