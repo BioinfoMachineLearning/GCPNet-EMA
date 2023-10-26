@@ -296,6 +296,7 @@ class GCPNetEMALitModule(LightningModule):
         ):
             decoder_in.append(batch.ankh_embedding_per_residue)
         if not self.hparams.model_cfg.ablate_gtn:
+            self.gtn.redraw_projection.redraw_projections()
             gtn_out = self.gtn(
                 x=self.gtn_input_embedding(torch.cat(decoder_in, dim=-1)),
                 pe=self.gtn_transform(batch).pe,
