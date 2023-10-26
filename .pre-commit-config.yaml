@@ -123,7 +123,7 @@ repos:
     hooks:
       - id: codespell
         args:
-          - --skip=logs/**,data/**,*.ipynb,src/data/components/ema_dataset.py
+          - --skip=logs/**,data/**,*.ipynb,src/data/components/ema_dataset.py,src/models/components/gps.py
           # - --ignore-words-list=abc,def
 
   # jupyter notebook cell output clearing

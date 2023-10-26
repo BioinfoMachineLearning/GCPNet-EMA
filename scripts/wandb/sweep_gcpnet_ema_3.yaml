@@ -90,6 +90,7 @@ command:
   - ${env}
   - HYDRA_FULL_ERROR=1
   - WANDB_START_METHOD=thread
+  - TRANSFORMERS_CACHE=/data/Transformers_Cache_Dir
   - /data/Repositories/Lab_Repositories/GCPNet-EMA/GCPNet-EMA/bin/python
   - ${program}
   - ${args_no_hyphens}

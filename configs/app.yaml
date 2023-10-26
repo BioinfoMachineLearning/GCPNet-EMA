@@ -28,6 +28,7 @@ data:
   structures_batches_for_protein_workshop: true
   ablate_af2_plddt: false
   ablate_esm_embeddings: false
+  ablate_ankh_embeddings: false
 logger: csv
 trainer:
   accelerator: cpu

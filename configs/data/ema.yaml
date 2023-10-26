@@ -14,6 +14,7 @@ subset_to_ca_atoms_only: false # note: set to `true` to convert a model into its
 structures_batches_for_protein_workshop: true # note: set to `true` to make batch inputs directly compatible with ProteinWorkshop models
 ablate_af2_plddt: false # note: set to `true` to remove AlphaFold2 plDDT scores as an input feature for ProteinWorkshop models
 ablate_esm_embeddings: false # note: set to `true` to remove ESM embeddings as an input feature for ProteinWorkshop models
+ablate_ankh_embeddings: false # note: set to `true` to remove Ankh embeddings as an input feature for ProteinWorkshop models
 batch_size: 1
 num_workers: 4
 pin_memory: false

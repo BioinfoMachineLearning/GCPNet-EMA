@@ -14,6 +14,7 @@ import pandas as pd
 import torch
 import torch.distributed as torch_dist
 import torch.nn as nn
+import torch_geometric.transforms as T
 import torchmetrics
 from beartype import beartype
 from beartype.typing import Any, Dict, List, Optional, Tuple
@@ -24,6 +25,7 @@ from torch_scatter import scatter
 
 from src.data.components.ema_dataset import MAX_PLDDT_VALUE
 from src.models import HALT_FILE_EXTENSION, annotate_pdb_with_new_column_values
+from src.models.components.gps import GPS
 from src.utils import RankedLogger
 
 log = RankedLogger(__name__, rank_zero_only=False)
@@ -111,6 +113,25 @@ class GCPNetEMALitModule(LightningModule):
         # A `ProteinWorkshop` `LightningModule` #
         self.model = model
 
+        # An optional graph transformer network for curating post-encoder node embeddings #
+        if not model_cfg.ablate_gtn:
+            gtn_attn_kwargs = {"dropout": model_cfg.gtn_dropout}
+            self.gtn_transform = T.AddRandomWalkPE(
+                walk_length=model_cfg.gtn_walk_length, attr_name="pe"
+            )
+            self.gtn_input_embedding = nn.LazyLinear(model_cfg.gtn_emb_dim)
+            self.gtn = GPS(
+                channels=model_cfg.gtn_emb_dim,
+                pe_walk_length=model_cfg.gtn_walk_length,
+                pe_dim=model_cfg.gtn_pe_dim,
+                num_edge_channels=1,
+                num_layers=model_cfg.gtn_num_layers,
+                attn_type=model_cfg.gtn_attn_type,
+                attn_kwargs=gtn_attn_kwargs,
+                num_heads=4,
+                pool_globally=False,
+            )
+
         # Initialize lazy layers for parameter counts.
         # This is also required for the `BenchMarkModel` model to be able to load weights.
         # Otherwise, lazy layers will have their parameters reset.
@@ -125,11 +146,24 @@ class GCPNetEMALitModule(LightningModule):
             decoder_in = [out["node_embedding"]]
             if not model_cfg.ablate_af2_plddt:
                 decoder_in.append(
-                    torch.zeros((batch.num_nodes, 1), device=self.device, dtype=torch.float)
+                    torch.zeros((batch.num_nodes, 1), device=self.device, dtype=torch.float32)
                 )
             if not model_cfg.ablate_esm_embeddings:
                 decoder_in.append(
-                    torch.zeros((batch.num_nodes, 1280), device=self.device, dtype=torch.float)
+                    torch.zeros((batch.num_nodes, 1280), device=self.device, dtype=torch.float32)
+                )
+            if not model_cfg.ablate_ankh_embeddings:
+                decoder_in.append(
+                    torch.zeros((batch.num_nodes, 1536), device=self.device, dtype=torch.float32)
+                )
+            if not model_cfg.ablate_gtn:
+                self.gtn_input_embedding(torch.cat(decoder_in, dim=-1))
+                decoder_in.append(
+                    torch.zeros(
+                        (batch.num_nodes, model_cfg.gtn_emb_dim),
+                        device=self.device,
+                        dtype=torch.float32,
+                    )
                 )
             decoder_in = torch.cat(decoder_in, dim=-1)
             out = self.model.decoder["graph_regression"](decoder_in)
@@ -256,6 +290,20 @@ class GCPNetEMALitModule(LightningModule):
             and "esm_embedding_per_residue" in batch
         ):
             decoder_in.append(batch.esm_embedding_per_residue)
+        if (
+            not self.hparams.model_cfg.ablate_ankh_embeddings
+            and "ankh_embedding_per_residue" in batch
+        ):
+            decoder_in.append(batch.ankh_embedding_per_residue)
+        if not self.hparams.model_cfg.ablate_gtn:
+            gtn_out = self.gtn(
+                x=self.gtn_input_embedding(torch.cat(decoder_in, dim=-1)),
+                pe=self.gtn_transform(batch).pe,
+                edge_index=batch.edge_index,
+                edge_attr=batch.edge_attr,
+                batch=batch.batch,
+            )
+            decoder_in.append(gtn_out)
         decoder_in = torch.cat(decoder_in, dim=-1)
         decoder_out = self.model.decoder["graph_regression"](decoder_in)
 
@@ -394,6 +442,9 @@ class GCPNetEMALitModule(LightningModule):
                         if p.grad is not None:
                             del p.grad  # free some memory
                     return None
+            else:
+                if not torch_dist.is_initialized():
+                    raise e
 
         # NOTE: for skipping batches in a multi-device setting
         # credit: https://github.com/Lightning-AI/lightning/issues/5243#issuecomment-1553404417

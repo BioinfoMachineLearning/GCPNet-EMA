@@ -299,6 +299,8 @@ class EMADataset(Dataset):
         num_rbf: int,
         esm_model: Optional[Any] = None,
         esm_batch_converter: Optional[Any] = None,
+        ankh_model: Optional[Any] = None,
+        ankh_tokenizer: Optional[Any] = None,
         python_exec_path: Optional[str] = None,
         lddt_exec_path: Optional[str] = None,
         pdbtools_dir: Optional[str] = None,
@@ -306,6 +308,7 @@ class EMADataset(Dataset):
         structures_batches_for_protein_workshop: bool = False,
         ablate_af2_plddt: bool = False,
         ablate_esm_embeddings: bool = False,
+        ablate_ankh_embeddings: bool = False,
     ):
         """Initializes a dataset of PDBs."""
         self.decoy_pdbs = decoy_pdbs
@@ -316,6 +319,8 @@ class EMADataset(Dataset):
         self.num_rbf = num_rbf
         self.esm_model = esm_model
         self.esm_batch_converter = esm_batch_converter
+        self.ankh_model = ankh_model
+        self.ankh_tokenizer = ankh_tokenizer
         self.python_exec_path = python_exec_path
         self.lddt_exec_path = lddt_exec_path
         self.pdbtools_dir = pdbtools_dir
@@ -323,6 +328,7 @@ class EMADataset(Dataset):
         self.structures_batches_for_protein_workshop = structures_batches_for_protein_workshop
         self.ablate_af2_plddt = ablate_af2_plddt
         self.ablate_esm_embeddings = ablate_esm_embeddings
+        self.ablate_ankh_embeddings = ablate_ankh_embeddings
         self.num_pdbs = len(self.decoy_pdbs)
 
         os.makedirs(self.model_data_cache_dir, exist_ok=True)
@@ -372,6 +378,8 @@ class EMADataset(Dataset):
     def _extract_protein_features(
         esm_model: Optional[nn.Module] = None,
         esm_batch_converter: Optional[Any] = None,
+        ankh_model: Optional[Any] = None,
+        ankh_tokenizer: Optional[Any] = None,
         decoy_protein_pdb_filepath: Optional[Path] = None,
         true_protein_pdb_filepath: Optional[Path] = None,
         protein_data: Optional[Any] = None,
@@ -387,6 +395,8 @@ class EMADataset(Dataset):
 
         :param esm_model: ESM model
         :param esm_batch_converter: ESM batch converter
+        :param ankh_model: Ankh model
+        :param ankh_tokenizer: Ankh tokenizer
         :param decoy_protein_pdb_filepath: path to decoy protein PDB file
         :param true_protein_pdb_filepath: path to true protein PDB file
         :param protein_data: protein data
@@ -575,6 +585,30 @@ class EMADataset(Dataset):
             if cache_processed_data:
                 torch.save(protein_data, str(protein_data_filepath))
 
+        # ensure that Ankh sequence embeddings are present
+        if "protein_decoy_ankh_sequence_embedding" not in protein_data:
+            ankh_protein_sequences = [
+                [STANDARD_AMINO_ACIDS[idx] for idx in protein_data.protein_residue_types.tolist()]
+            ]
+            ankh_outputs = ankh_tokenizer.batch_encode_plus(
+                ankh_protein_sequences,
+                add_special_tokens=True,
+                padding=True,
+                is_split_into_words=True,
+                return_tensors="pt",
+            )
+            with torch.inference_mode():
+                protein_data.protein_decoy_ankh_sequence_embedding = (
+                    ankh_model(
+                        input_ids=ankh_outputs["input_ids"],
+                        attention_mask=ankh_outputs["attention_mask"],
+                    )
+                    .last_hidden_state[..., 0:-1, :]
+                    .squeeze(0)
+                )
+            if cache_processed_data:
+                torch.save(protein_data, str(protein_data_filepath))
+
         # convert ESM residue-wise embeddings and AlphaFold plDDTs into atom-wise embeddings at runtime to reduce storage requirements
         protein_data.protein_atom_rep = protein_data.protein_atom_rep.repeat_interleave(
             NUM_COORDINATES_PER_RESIDUE, 0
@@ -591,6 +625,8 @@ class EMADataset(Dataset):
     def _prot_to_data(
         esm_model: Optional[nn.Module] = None,
         esm_batch_converter: Optional[Any] = None,
+        ankh_model: Optional[Any] = None,
+        ankh_tokenizer: Optional[Any] = None,
         decoy_protein_pdb_filepath: Optional[Path] = None,
         true_protein_pdb_filepath: Optional[Path] = None,
         protein_data: Optional[Any] = None,
@@ -606,6 +642,8 @@ class EMADataset(Dataset):
 
         :param esm_model: ESM model
         :param esm_batch_converter: ESM batch converter
+        :param ankh_model: Ankh model
+        :param ankh_tokenizer: Ankh tokenizer
         :param decoy_protein_pdb_filepath: path to decoy protein PDB file
         :param true_protein_pdb_filepath: path to true protein PDB file
         :param protein_data: protein data
@@ -619,8 +657,10 @@ class EMADataset(Dataset):
         :return: protein data
         """
         protein_data, protein = EMADataset._extract_protein_features(
-            esm_model,
-            esm_batch_converter,
+            esm_model=esm_model,
+            esm_batch_converter=esm_batch_converter,
+            ankh_model=ankh_model,
+            ankh_tokenizer=ankh_tokenizer,
             decoy_protein_pdb_filepath=decoy_protein_pdb_filepath,
             true_protein_pdb_filepath=true_protein_pdb_filepath,
             protein_data=protein_data,
@@ -648,6 +688,9 @@ class EMADataset(Dataset):
             decoy_protein_per_residue_lddt=getattr(
                 protein_data, "protein_decoy_per_residue_lddt", None
             ),
+            decoy_protein_ankh_sequence_embedding=getattr(
+                protein_data, "protein_decoy_ankh_sequence_embedding", None
+            ),
         )
         return data, protein
 
@@ -657,13 +700,17 @@ class EMADataset(Dataset):
         data: Data,
         ablate_af2_plddt: bool = False,
         ablate_esm_embeddings: bool = False,
+        ablate_ankh_embeddings: bool = False,
         coords_fill_value: float = 1e-5,
     ) -> Data:
         """Structure data for `ProteinWorkshop` models.
 
         :param data: `Data` collection
+        :param ablate_af2_plddt: whether to ablate AlphaFold2 plDDT values
+        :param ablate_esm_embeddings: whether to ablate ESM embeddings
+        :param ablate_ankh_embeddings: whether to ablate Ankh embeddings
         :param coords_fill_value: coordinates fill value
-        :return: `Data` collection
+        :return: restructured `Data` collection
         """
         restructured_data = Data()
         # NOTE: `CA` is assumed to the `representation` of one's pre-trained ProteinWorkshop model
@@ -687,6 +734,9 @@ class EMADataset(Dataset):
             None
             if ablate_esm_embeddings
             else data.atom_rep.view(-1, 14, data.atom_rep.shape[-1])[:, 1, :]
+        )
+        restructured_data.ankh_embedding_per_residue = (
+            None if ablate_ankh_embeddings else data.decoy_protein_ankh_sequence_embedding
         )
         return restructured_data
 
@@ -876,6 +926,8 @@ class EMADataset(Dataset):
         data, _ = self._prot_to_data(
             esm_model=self.esm_model,
             esm_batch_converter=self.esm_batch_converter,
+            ankh_model=self.ankh_model,
+            ankh_tokenizer=self.ankh_tokenizer,
             decoy_protein_pdb_filepath=decoy_pdb_path,
             true_protein_pdb_filepath=true_pdb_path,
             protein_data=protein_data,
@@ -892,6 +944,7 @@ class EMADataset(Dataset):
                 data,
                 ablate_af2_plddt=self.ablate_af2_plddt,
                 ablate_esm_embeddings=self.ablate_esm_embeddings,
+                ablate_ankh_embeddings=self.ablate_ankh_embeddings,
             )
         else:
             data = self.finalize_graph_topology_and_features_within_data(

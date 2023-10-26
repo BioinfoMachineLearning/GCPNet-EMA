@@ -16,6 +16,15 @@ scheduler:
 # compile model for faster training with PyTorch 2.0
 compile: false
 
+# graph transformer network (GTN) arguments
+ablate_gtn: false
+gtn_emb_dim: 64
+gtn_attn_type: multihead # or "performer"
+gtn_dropout: 0.5
+gtn_pe_dim: 8
+gtn_num_layers: 10
+gtn_walk_length: 20
+
 # `ProteinWorkshop` encoder-decoder model config
 defaults:
   - model_cfg: structure_denoising_pretrained_gcpnet.yaml

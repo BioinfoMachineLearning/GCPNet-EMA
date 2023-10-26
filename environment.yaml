@@ -198,7 +198,7 @@ dependencies:
       - fsspec==2023.4.0
       - fuzzywuzzy==0.18.0
       - gevent==23.9.1
-      - graphein==1.7.3
+      - git+https://github.com/a-r-j/graphein.git@028f416a12552dcf65dc18d816504b9be0343cb4
       - greenlet==3.0.0
       - grequests==0.7.0
       - gunicorn==21.2.0
@@ -290,7 +290,7 @@ dependencies:
       - threadpoolctl==3.2.0
       - tokenizers==0.14.1
       - https://data.pyg.org/whl/torch-2.1.0%2Bcu118/torch_cluster-1.6.2%2Bpt21cu118-cp310-cp310-linux_x86_64.whl
-      - torch-geometric==2.3.1
+      - torch-geometric==2.4.0
       - https://data.pyg.org/whl/torch-2.1.0%2Bcu118/torch_scatter-2.1.2%2Bpt21cu118-cp310-cp310-linux_x86_64.whl
       - https://data.pyg.org/whl/torch-2.1.0%2Bcu118/torch_sparse-0.6.18%2Bpt21cu118-cp310-cp310-linux_x86_64.whl
       - https://data.pyg.org/whl/torch-2.1.0%2Bcu118/torch_spline_conv-1.2.2%2Bpt21cu118-cp310-cp310-linux_x86_64.whl

@@ -4,6 +4,7 @@
 
 import os
 
+import ankh
 import torch
 import torch_geometric
 from beartype import beartype
@@ -32,6 +33,7 @@ class EMADataModule(LightningDataModule):
         structures_batches_for_protein_workshop: bool = False,
         ablate_af2_plddt: bool = False,
         ablate_esm_embeddings: bool = False,
+        ablate_ankh_embeddings: bool = False,
         batch_size: int = 1,
         num_workers: int = 0,
         pin_memory: bool = True,
@@ -55,6 +57,9 @@ class EMADataModule(LightningDataModule):
         )
         self.esm_model = self.esm_model.eval().cpu()
         self.esm_batch_converter = esm_alphabet.get_batch_converter()
+        # features - Ankh protein sequence embeddings #
+        self.ankh_model, self.ankh_tokenizer = ankh.load_large_model()
+        self.ankh_model = self.ankh_model.eval().cpu()
 
         self.data_train: Optional[Dataset] = None
         self.data_val: Optional[Dataset] = None
@@ -141,6 +146,8 @@ class EMADataModule(LightningDataModule):
                 num_rbf=self.hparams.num_rbf,
                 esm_model=getattr(self, "esm_model", None),
                 esm_batch_converter=getattr(self, "esm_batch_converter", None),
+                ankh_model=getattr(self, "ankh_model", None),
+                ankh_tokenizer=getattr(self, "ankh_tokenizer", None),
                 python_exec_path=self.hparams.python_exec_path,
                 lddt_exec_path=self.hparams.lddt_exec_path,
                 pdbtools_dir=self.hparams.pdbtools_dir,
@@ -148,6 +155,7 @@ class EMADataModule(LightningDataModule):
                 structures_batches_for_protein_workshop=self.hparams.structures_batches_for_protein_workshop,
                 ablate_af2_plddt=self.hparams.ablate_af2_plddt,
                 ablate_esm_embeddings=self.hparams.ablate_esm_embeddings,
+                ablate_ankh_embeddings=self.hparams.ablate_ankh_embeddings,
             )
             self.data_val = EMADataset(
                 decoy_pdbs=valid_pdbs,
@@ -158,6 +166,8 @@ class EMADataModule(LightningDataModule):
                 num_rbf=self.hparams.num_rbf,
                 esm_model=getattr(self, "esm_model", None),
                 esm_batch_converter=getattr(self, "esm_batch_converter", None),
+                ankh_model=getattr(self, "ankh_model", None),
+                ankh_tokenizer=getattr(self, "ankh_tokenizer", None),
                 python_exec_path=self.hparams.python_exec_path,
                 lddt_exec_path=self.hparams.lddt_exec_path,
                 pdbtools_dir=self.hparams.pdbtools_dir,
@@ -165,6 +175,7 @@ class EMADataModule(LightningDataModule):
                 structures_batches_for_protein_workshop=self.hparams.structures_batches_for_protein_workshop,
                 ablate_af2_plddt=self.hparams.ablate_af2_plddt,
                 ablate_esm_embeddings=self.hparams.ablate_esm_embeddings,
+                ablate_ankh_embeddings=self.hparams.ablate_ankh_embeddings,
             )
 
         if stage and stage == "test" and not self.data_test:
@@ -180,6 +191,8 @@ class EMADataModule(LightningDataModule):
                 num_rbf=self.hparams.num_rbf,
                 esm_model=getattr(self, "esm_model", None),
                 esm_batch_converter=getattr(self, "esm_batch_converter", None),
+                ankh_model=getattr(self, "ankh_model", None),
+                ankh_tokenizer=getattr(self, "ankh_tokenizer", None),
                 python_exec_path=self.hparams.python_exec_path,
                 lddt_exec_path=self.hparams.lddt_exec_path,
                 pdbtools_dir=self.hparams.pdbtools_dir,
@@ -187,6 +200,7 @@ class EMADataModule(LightningDataModule):
                 structures_batches_for_protein_workshop=self.hparams.structures_batches_for_protein_workshop,
                 ablate_af2_plddt=self.hparams.ablate_af2_plddt,
                 ablate_esm_embeddings=self.hparams.ablate_esm_embeddings,
+                ablate_ankh_embeddings=self.hparams.ablate_ankh_embeddings,
             )
 
         if stage and stage == "predict":
@@ -204,6 +218,8 @@ class EMADataModule(LightningDataModule):
                 num_rbf=self.hparams.num_rbf,
                 esm_model=getattr(self, "esm_model", None),
                 esm_batch_converter=getattr(self, "esm_batch_converter", None),
+                ankh_model=getattr(self, "ankh_model", None),
+                ankh_tokenizer=getattr(self, "ankh_tokenizer", None),
                 python_exec_path=self.hparams.python_exec_path,
                 lddt_exec_path=self.hparams.lddt_exec_path,
                 pdbtools_dir=self.hparams.pdbtools_dir,
@@ -211,6 +227,7 @@ class EMADataModule(LightningDataModule):
                 structures_batches_for_protein_workshop=self.hparams.structures_batches_for_protein_workshop,
                 ablate_af2_plddt=self.hparams.ablate_af2_plddt,
                 ablate_esm_embeddings=self.hparams.ablate_esm_embeddings,
+                ablate_ankh_embeddings=self.hparams.ablate_ankh_embeddings,
             )
 
     @beartype

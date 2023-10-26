@@ -69,6 +69,14 @@ def evaluate(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         cfg.model.model_cfg = validate_config(cfg.model.model_cfg)
         cfg.model.model_cfg.ablate_af2_plddt = cfg.data.ablate_af2_plddt
         cfg.model.model_cfg.ablate_esm_embeddings = cfg.data.ablate_esm_embeddings
+        cfg.model.model_cfg.ablate_ankh_embeddings = cfg.data.ablate_ankh_embeddings
+        cfg.model.model_cfg.ablate_gtn = cfg.model.ablate_gtn
+        cfg.model.model_cfg.gtn_walk_length = cfg.model.gtn_walk_length
+        cfg.model.model_cfg.gtn_emb_dim = cfg.model.gtn_emb_dim
+        cfg.model.model_cfg.gtn_attn_type = cfg.model.gtn_attn_type
+        cfg.model.model_cfg.gtn_dropout = cfg.model.gtn_dropout
+        cfg.model.model_cfg.gtn_pe_dim = cfg.model.gtn_pe_dim
+        cfg.model.model_cfg.gtn_num_layers = cfg.model.gtn_num_layers
     benchmark_model = BenchMarkModel(cfg.model.model_cfg)
     model: LightningModule = hydra.utils.instantiate(
         cfg.model,
