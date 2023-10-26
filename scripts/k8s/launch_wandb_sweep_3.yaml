@@ -5,7 +5,7 @@ metadata:
   labels:
     k8s-app: sweep-gcpnet-ema-3
 spec:
-  replicas: 4
+  replicas: 1
   selector:
     matchLabels:
       k8s-app: sweep-gcpnet-ema-3
@@ -53,7 +53,7 @@ spec:
             - bash
             - -c
             - cd /data/Repositories/Lab_Repositories/GCPNet-EMA
-              && /data/Repositories/Lab_Repositories/GCPNet-EMA/GCPNet-EMA/bin/python -m wandb agent bml-lab/GCPNet-EMA/c72c9xae
+              && /data/Repositories/Lab_Repositories/GCPNet-EMA/GCPNet-EMA/bin/python -m wandb agent bml-lab/GCPNet-EMA/7oex45n3
           env:
             - name: NCCL_SOCKET_IFNAME
               value: eth0

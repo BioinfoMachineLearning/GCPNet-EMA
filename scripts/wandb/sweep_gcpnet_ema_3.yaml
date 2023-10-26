@@ -54,7 +54,7 @@ parameters:
     value: False
 
   model.optimizer.lr:
-    values: [1e-5, 3e-5, 1e-4, 3e-4]
+    value: 1e-5
 
   model.optimizer.weight_decay:
     value: 0.0
@@ -81,7 +81,7 @@ parameters:
     value: 1
 
   trainer.max_epochs:
-    value: 1000
+    value: 3
 
   test:
     value: True
