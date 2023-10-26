@@ -11,6 +11,8 @@ from torch_geometric.nn.attention import PerformerAttention
 
 
 class RedrawProjection:
+    """Helper class to redraw the projection matrices of all fast attention layers."""
+
     def __init__(self, model: torch.nn.Module, redraw_interval: Optional[int] = None):
         self.model = model
         self.redraw_interval = redraw_interval
@@ -32,6 +34,8 @@ class RedrawProjection:
 
 
 class GPS(torch.nn.Module):
+    """GPS model."""
+
     def __init__(
         self,
         channels: int,
@@ -51,7 +55,6 @@ class GPS(torch.nn.Module):
         self.node_emb = Linear(channels, channels - pe_dim)
         self.pe_lin = Linear(pe_walk_length, pe_dim)
         self.pe_norm = BatchNorm1d(pe_walk_length)
-        self.edge_norm = BatchNorm1d(num_edge_channels)
         self.edge_emb = Linear(num_edge_channels, channels)
 
         self.convs = ModuleList()
@@ -101,7 +104,7 @@ class GPS(torch.nn.Module):
         """
         x_pe = self.pe_norm(pe)
         x = torch.cat((self.node_emb(x), self.pe_lin(x_pe)), 1)
-        edge_attr = self.edge_emb(self.edge_norm(edge_attr))
+        edge_attr = self.edge_emb(edge_attr)
 
         for conv in self.convs:
             x = conv(x, edge_index, batch, edge_attr=edge_attr)
