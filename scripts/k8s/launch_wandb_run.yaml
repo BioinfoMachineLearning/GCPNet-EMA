@@ -26,8 +26,8 @@ spec:
             - -c
             - cd /data/Repositories/Lab_Repositories/GCPNet-EMA
               && WANDB__SERVICE_WAIT=3600 /data/Repositories/Lab_Repositories/GCPNet-EMA/GCPNet-EMA/bin/python src/train.py
-              experiment=gcpnet_ema logger=wandb logger.wandb.id=8gs5e6hw logger.wandb.name=10112023_12_00_Run_GCPNet_EMA
-              hydra.run.dir=logs/train/runs/8gs5e6hw
+              experiment=gcpnet_ema logger=wandb logger.wandb.id=8gs5e6hx logger.wandb.name=10262023_12_00_Run_GCPNet_EMA
+              hydra.run.dir=logs/train/runs/8gs5e6hx
           env:
             - name: NCCL_SOCKET_IFNAME
               value: eth0
