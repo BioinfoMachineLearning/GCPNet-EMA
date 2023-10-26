@@ -43,12 +43,12 @@ spec:
             - containerPort: 8880
           resources:
             limits:
-              cpu: 2
+              cpu: 1
               memory: 32Gi
               nvidia.com/gpu: 1
             requests:
-              cpu: 2
-              memory: 32Gi
+              cpu: 1
+              memory: 30Gi
               nvidia.com/gpu: 1
           volumeMounts:
             - mountPath: /data
