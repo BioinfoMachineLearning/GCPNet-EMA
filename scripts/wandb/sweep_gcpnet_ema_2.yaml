@@ -60,7 +60,7 @@ parameters:
     value: False
 
   model.optimizer.lr:
-    value: 1e-5
+    values: [1e-5, 3e-5, 1e-4, 3e-4]
 
   model.optimizer.weight_decay:
     value: 0.0
