@@ -14,18 +14,20 @@ spec:
                   - key: nvidia.com/gpu.product
                     operator: In
                     values:
-                      # NOTE: we select 48GB GPUs only here
-                      - NVIDIA-A40
-                      - NVIDIA-RTX-A6000
-                      - Quadro-RTX-8000
+                      # NOTE: we select 24GB GPUs only here
+                      - NVIDIA-A10
+                      - NVIDIA-GeForce-RTX-3090
+                      - NVIDIA-TITAN-RTX
+                      - NVIDIA-RTX-A5000
+                      - Quadro-RTX-6000
       containers:
         - command:
             - bash
             - -c
             - cd /data/Repositories/Lab_Repositories/GCPNet-EMA
               && WANDB__SERVICE_WAIT=3600 /data/Repositories/Lab_Repositories/GCPNet-EMA/GCPNet-EMA/bin/python src/train.py
-              experiment=gcpnet_ema logger=wandb logger.wandb.id=8gs5e6hx logger.wandb.name=10262023_12_00_Run_GCPNet_EMA
-              hydra.run.dir=logs/train/runs/8gs5e6hx
+              experiment=gcpnet_ema logger=wandb logger.wandb.id=8gs5e6hx logger.wandb.name=10292023_12_30_Run_GCPNet_EMA
+              hydra.run.dir=logs/train/runs/8gs5lkj3rd
           env:
             - name: NCCL_SOCKET_IFNAME
               value: eth0
