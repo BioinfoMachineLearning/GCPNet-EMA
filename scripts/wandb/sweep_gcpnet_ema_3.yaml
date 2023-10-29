@@ -18,6 +18,12 @@ parameters:
   data.num_workers:
     value: 4
 
+  data.load_esm_model:
+    value: False
+
+  data.load_ankh_model:
+    value: False
+
   extras.enforce_tags:
     value: False
 

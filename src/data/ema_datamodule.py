@@ -31,6 +31,8 @@ class EMADataModule(LightningDataModule):
         pdbtools_dir: Optional[str] = None,
         subset_to_ca_atoms_only: bool = False,
         structures_batches_for_protein_workshop: bool = False,
+        load_esm_model: bool = True,
+        load_ankh_model: bool = True,
         ablate_af2_plddt: bool = False,
         ablate_esm_embeddings: bool = False,
         ablate_ankh_embeddings: bool = False,
@@ -52,14 +54,20 @@ class EMADataModule(LightningDataModule):
         self.save_hyperparameters(logger=False)
 
         # features - ESM protein sequence embeddings #
-        self.esm_model, esm_alphabet = torch.hub.load(
-            "facebookresearch/esm:main", "esm2_t33_650M_UR50D"
-        )
-        self.esm_model = self.esm_model.eval().cpu()
-        self.esm_batch_converter = esm_alphabet.get_batch_converter()
+        if load_esm_model:
+            self.esm_model, esm_alphabet = torch.hub.load(
+                "facebookresearch/esm:main", "esm2_t33_650M_UR50D"
+            )
+            self.esm_model = self.esm_model.eval().cpu()
+            self.esm_batch_converter = esm_alphabet.get_batch_converter()
+        else:
+            self.esm_model, self.esm_batch_converter = None, None
         # features - Ankh protein sequence embeddings #
-        self.ankh_model, self.ankh_tokenizer = ankh.load_large_model()
-        self.ankh_model = self.ankh_model.eval().cpu()
+        if load_ankh_model:
+            self.ankh_model, self.ankh_tokenizer = ankh.load_large_model()
+            self.ankh_model = self.ankh_model.eval().cpu()
+        else:
+            self.ankh_model, self.ankh_tokenizer = None, None
 
         self.data_train: Optional[Dataset] = None
         self.data_val: Optional[Dataset] = None
