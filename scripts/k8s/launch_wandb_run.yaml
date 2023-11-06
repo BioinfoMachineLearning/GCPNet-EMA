@@ -25,8 +25,8 @@ spec:
             - bash
             - -c
             - cd /data/Repositories/Lab_Repositories/GCPNet-EMA
-              && WANDB__SERVICE_WAIT=3600 /data/Repositories/Lab_Repositories/GCPNet-EMA/GCPNet-EMA/bin/python src/train.py
-              experiment=gcpnet_ema logger=wandb logger.wandb.id=8gs5e6hx logger.wandb.name=10292023_12_30_Run_GCPNet_EMA
+              && WANDB__SERVICE_WAIT=3600 TRANSFORMERS_CACHE=/data/Transformers_Cache_Dir /data/Repositories/Lab_Repositories/GCPNet-EMA/GCPNet-EMA/bin/python src/train.py
+              experiment=gcpnet_ema logger=wandb logger.wandb.id=8gs5e6hx logger.wandb.name=11062023_12_30_Run_GCPNet_EMA
               hydra.run.dir=logs/train/runs/8gs5lkj3rd
           env:
             - name: NCCL_SOCKET_IFNAME
@@ -46,11 +46,11 @@ spec:
           resources:
             limits:
               cpu: 1
-              memory: 32Gi
+              memory: 8Gi
               nvidia.com/gpu: 1
             requests:
               cpu: 1
-              memory: 30Gi
+              memory: 6Gi
               nvidia.com/gpu: 1
           volumeMounts:
             - mountPath: /data

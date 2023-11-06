@@ -1,18 +1,10 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: batch/v1
+kind: Job
 metadata:
-  name: sweep-gcpnet-ema-1
-  labels:
-    k8s-app: sweep-gcpnet-ema-1
+  name: run-gcpnet-ema-ablate-af2-plddt
 spec:
-  replicas: 4
-  selector:
-    matchLabels:
-      k8s-app: sweep-gcpnet-ema-1
+  backoffLimit: 0
   template:
-    metadata:
-      labels:
-        k8s-app: sweep-gcpnet-ema-1
     spec:
       affinity:
         nodeAffinity:
@@ -29,9 +21,26 @@ spec:
                       - NVIDIA-RTX-A5000
                       - Quadro-RTX-6000
       containers:
-        - name: sweep-gcpnet-ema-1-pod
+        - command:
+            - bash
+            - -c
+            - cd /data/Repositories/Lab_Repositories/GCPNet-EMA
+              && WANDB__SERVICE_WAIT=3600 TRANSFORMERS_CACHE=/data/Transformers_Cache_Dir /data/Repositories/Lab_Repositories/GCPNet-EMA/GCPNet-EMA/bin/python src/train.py
+              experiment=gcpnet_ema logger=wandb logger.wandb.id=kahxcvrl logger.wandb.name=11062023_12_30_Run_GCPNet_EMA_Ablate_AF2_plDDT
+              hydra.run.dir=logs/train/runs/kahxcvrl model.model_cfg.ablate_af2_plddt=true
+          env:
+            - name: NCCL_SOCKET_IFNAME
+              value: eth0
+            - name: NCCL_DEBUG
+              value: INFO
+            - name: WANDB_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: acmwhb-wandb-secret
+                  key: secret
           image: gitlab-registry.nrp-nautilus.io/bioinfomachinelearning/bio-diffusion:bb558b48
           imagePullPolicy: IfNotPresent
+          name: bio-diffusion
           ports:
             - containerPort: 8880
           resources:
@@ -49,24 +58,9 @@ spec:
             - mountPath: /dev/shm
               name: dshm
           workingDir: /data/Repositories/Lab_Repositories/GCPNet-EMA
-          command:
-            - bash
-            - -c
-            - cd /data/Repositories/Lab_Repositories/GCPNet-EMA
-              && /data/Repositories/Lab_Repositories/GCPNet-EMA/GCPNet-EMA/bin/python -m wandb agent bml-lab/GCPNet-EMA/ugvea16r
-          env:
-            - name: NCCL_SOCKET_IFNAME
-              value: eth0
-            - name: NCCL_DEBUG
-              value: INFO
-            - name: WANDB_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: acmwhb-wandb-secret
-                  key: secret
       imagePullSecrets:
         - name: regcred-bio-diffusion
-      restartPolicy: Always
+      restartPolicy: Never
       volumes:
         - name: acmwhb-gcpnet-pvc-aux-11
           persistentVolumeClaim:
