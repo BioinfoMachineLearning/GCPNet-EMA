@@ -24,6 +24,9 @@ parameters:
   data.load_ankh_model:
     value: False
 
+  data.ablate_ankh_embeddings:
+    value: True
+
   extras.enforce_tags:
     value: False
 
@@ -53,9 +56,6 @@ parameters:
 
   model.gtn_num_layers:
     values: [5, 10]
-
-  model.model_cfg.ablate_ankh_embeddings:
-    value: True
 
   # NOTE: we want to load the pre-trained encoder weights
   model.model_cfg.finetune.encoder.load_weights:
