@@ -1,0 +1,70 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: run-gcpnet-ema-best
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: nvidia.com/gpu.product
+                    operator: In
+                    values:
+                      # NOTE: we select 24GB GPUs only here
+                      - NVIDIA-A10
+                      - NVIDIA-GeForce-RTX-3090
+                      - NVIDIA-TITAN-RTX
+                      - NVIDIA-RTX-A5000
+                      - Quadro-RTX-6000
+      containers:
+        - command:
+            - bash
+            - -c
+            - cd /data/Repositories/Lab_Repositories/GCPNet-EMA
+              && WANDB__SERVICE_WAIT=3600 TRANSFORMERS_CACHE=/data/Transformers_Cache_Dir /data/Repositories/Lab_Repositories/GCPNet-EMA/GCPNet-EMA/bin/python src/train.py
+              experiment=gcpnet_ema logger=wandb logger.wandb.id=ml3rrzqn logger.wandb.name=11092023_20_30_Run_GCPNet_EMA_Best
+              hydra.run.dir=logs/train/runs/ml3rrzqn data.load_esm_model=false data.load_ankh_model=false
+          env:
+            - name: NCCL_SOCKET_IFNAME
+              value: eth0
+            - name: NCCL_DEBUG
+              value: INFO
+            - name: WANDB_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: acmwhb-wandb-secret
+                  key: secret
+          image: gitlab-registry.nrp-nautilus.io/bioinfomachinelearning/bio-diffusion:bb558b48
+          imagePullPolicy: IfNotPresent
+          name: bio-diffusion
+          ports:
+            - containerPort: 8880
+          resources:
+            limits:
+              cpu: 1
+              memory: 8Gi
+              nvidia.com/gpu: 1
+            requests:
+              cpu: 1
+              memory: 6Gi
+              nvidia.com/gpu: 1
+          volumeMounts:
+            - mountPath: /data
+              name: acmwhb-gcpnet-pvc-aux-11
+            - mountPath: /dev/shm
+              name: dshm
+          workingDir: /data/Repositories/Lab_Repositories/GCPNet-EMA
+      imagePullSecrets:
+        - name: regcred-bio-diffusion
+      restartPolicy: Never
+      volumes:
+        - name: acmwhb-gcpnet-pvc-aux-11
+          persistentVolumeClaim:
+            claimName: acmwhb-gcpnet-pvc-aux-11
+        - emptyDir:
+            medium: Memory
+          name: dshm
