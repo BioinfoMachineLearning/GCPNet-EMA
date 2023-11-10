@@ -26,8 +26,8 @@ spec:
             - -c
             - cd /data/Repositories/Lab_Repositories/GCPNet-EMA
               && WANDB__SERVICE_WAIT=3600 TRANSFORMERS_CACHE=/data/Transformers_Cache_Dir /data/Repositories/Lab_Repositories/GCPNet-EMA/GCPNet-EMA/bin/python src/train.py
-              experiment=gcpnet_ema logger=wandb logger.wandb.id=kahxcvrl logger.wandb.name=11062023_12_30_Run_GCPNet_EMA_Ablate_AF2_plDDT
-              hydra.run.dir=logs/train/runs/kahxcvrl data.load_esm_model=false data.load_ankh_model=false data.ablate_af2_plddt=true
+              experiment=gcpnet_ema logger=wandb logger.wandb.id=1awmavbg logger.wandb.name=11102023_10_00_Run_GCPNet_EMA_Ablate_AF2_plDDT
+              hydra.run.dir=logs/train/runs/1awmavbg data.load_esm_model=false data.load_ankh_model=false data.ablate_af2_plddt=true
           env:
             - name: NCCL_SOCKET_IFNAME
               value: eth0
