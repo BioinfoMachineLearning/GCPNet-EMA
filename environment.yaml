@@ -165,7 +165,7 @@ dependencies:
       - beartype==0.15.0
       - beautifulsoup4==4.12.2
       - biopandas==0.5.1.dev0
-      - biopython==1.79
+      - biopython==1.80
       - bioservices==1.11.2
       - biotite==0.37.0
       - blessed==1.20.0
@@ -246,7 +246,6 @@ dependencies:
       - pillow==9.3.0
       - plotly==5.17.0
       - prettytable==3.9.0
-      - prody==2.4.1
       - prompt-toolkit==3.0.39
       - proteinworkshop==0.2.4
       - ptyprocess==0.7.0

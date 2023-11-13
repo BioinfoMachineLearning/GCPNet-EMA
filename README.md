@@ -53,6 +53,9 @@ conda activate GCPNet-EMA  # NOTE: one still needs to use `conda` to (de)activat
 
 # install local project as package
 pip3 install -e .
+
+# install ProDy separately to avoid a Biopython version conflict with Ankh
+pip3 install prody==2.4.1
 ```
 
 **Note**: TM-score is required to score predicted protein structures, where one can install it as follows:
