@@ -34,4 +34,4 @@ model:
 logger: csv
 trainer:
   accelerator: cpu
-ckpt_path: checkpoints/structure_ema_finetuned_gcpnet_wvubt745_best_epoch_048.ckpt
+ckpt_path: checkpoints/default_structure_ema_finetuned_gcpnet_without_plddt_or_esm_emb_p0p8c6pz_best_epoch_099.ckpt
