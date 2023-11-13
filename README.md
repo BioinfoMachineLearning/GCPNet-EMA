@@ -119,7 +119,7 @@ EMA Model
 
 ### How to predict lDDT scores for protein structures using `GCPNet-EMA`
 
-Predict per-residue and per-model lDDT scores for computationally-predicted (e.g., AlphaFold 2) protein structure decoys
+Predict per-residue and per-model lDDT scores for 3D protein structures
 
 ```bash
 ema_model_ckpt_path="checkpoints/EMA/model.ckpt"
