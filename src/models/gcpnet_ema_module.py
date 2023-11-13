@@ -114,7 +114,7 @@ class GCPNetEMALitModule(LightningModule):
         self.model = model
 
         # An optional graph transformer network for curating post-encoder node embeddings #
-        if not model_cfg.ablate_gtn:
+        if hasattr(model_cfg, "ablate_gtn") and not model_cfg.ablate_gtn:
             gtn_attn_kwargs = {"dropout": model_cfg.gtn_dropout}
             self.gtn_transform = T.AddRandomWalkPE(
                 walk_length=model_cfg.gtn_walk_length, attr_name="pe"
@@ -152,11 +152,14 @@ class GCPNetEMALitModule(LightningModule):
                 decoder_in.append(
                     torch.zeros((batch.num_nodes, 1280), device=self.device, dtype=torch.float32)
                 )
-            if not model_cfg.ablate_ankh_embeddings:
+            if (
+                hasattr(model_cfg, "ablate_ankh_embeddings")
+                and not model_cfg.ablate_ankh_embeddings
+            ):
                 decoder_in.append(
                     torch.zeros((batch.num_nodes, 1536), device=self.device, dtype=torch.float32)
                 )
-            if not model_cfg.ablate_gtn:
+            if hasattr(model_cfg, "ablate_gtn") and not model_cfg.ablate_gtn:
                 self.gtn_input_embedding(torch.cat(decoder_in, dim=-1))
                 decoder_in.append(
                     torch.zeros(
@@ -291,11 +294,12 @@ class GCPNetEMALitModule(LightningModule):
         ):
             decoder_in.append(batch.esm_embedding_per_residue)
         if (
-            not self.hparams.model_cfg.ablate_ankh_embeddings
+            hasattr(self.hparams.model_cfg, "ablate_ankh_embeddings")
+            and not self.hparams.model_cfg.ablate_ankh_embeddings
             and "ankh_embedding_per_residue" in batch
         ):
             decoder_in.append(batch.ankh_embedding_per_residue)
-        if not self.hparams.model_cfg.ablate_gtn:
+        if hasattr(self.hparams.model_cfg, "ablate_gtn") and not self.hparams.model_cfg.ablate_gtn:
             self.gtn.redraw_projection.redraw_projections()
             gtn_out = self.gtn(
                 x=self.gtn_input_embedding(torch.cat(decoder_in, dim=-1)),
