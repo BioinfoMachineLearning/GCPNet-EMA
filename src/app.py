@@ -2,6 +2,7 @@
 # Following code curated for GCPNet-EMA (https://github.com/BioinfoMachineLearning/GCPNet-EMA):
 # -------------------------------------------------------------------------------------------------------------------------------------
 
+import copy
 import os
 import shutil
 import smtplib
@@ -50,7 +51,7 @@ from src import (
     register_custom_omegaconf_resolvers as src_register_custom_omegaconf_resolvers,
 )
 from src import resolve_omegaconf_variable
-from src.utils import RankedLogger, task_wrapper
+from src.utils import RankedLogger
 
 log = RankedLogger(__name__, rank_zero_only=True)
 
@@ -70,7 +71,14 @@ cfg = hydra.compose(config_name=config_name, return_hydra_config=True)
 HydraConfig().cfg = cfg
 
 predict_cfg: DictConfig = cfg
+af2_predict_cfg: DictConfig = copy.deepcopy(cfg)
+with open_dict(af2_predict_cfg):
+    af2_predict_cfg.ckpt_path = af2_predict_cfg.af2_ckpt_path
+    af2_predict_cfg.model.ablate_af2_plddt = False
+
+datamodule: Optional[LightningDataModule] = None
 model: Optional[LightningModule] = None
+af2_model: Optional[LightningModule] = None
 plugins: Optional[ClusterEnvironment] = None
 strategy: Optional[Strategy] = None
 trainer: Optional[Trainer] = None
@@ -127,7 +135,7 @@ def success():
     """Hosts an endpoint to make predictions for a given PDB file using a pre-trained
     checkpoint."""
     if request.method == "POST":
-        global predict_cfg, model, plugins, strategy, trainer
+        global predict_cfg, af2_predict_cfg, model, af2_model, plugins, strategy, trainer
         f = request.files["file"]
         save_location = f.filename
         f.save(save_location)
@@ -138,8 +146,13 @@ def success():
             predict_cfg.data.predict_input_dir = predict_input_dir
             predict_cfg.data.predict_true_dir = None
             predict_cfg.data.predict_output_dir = predict_output_dir
+        with open_dict(af2_predict_cfg):
+            af2_predict_cfg.data.predict_input_dir = predict_input_dir
+            af2_predict_cfg.data.predict_true_dir = None
+            af2_predict_cfg.data.predict_output_dir = predict_output_dir
         shutil.move(save_location, new_save_location)
-        predict(predict_cfg)
+        af2_input = "af2_input" in request.form
+        predict(predict_cfg, af2_predict_cfg, af2_input=af2_input)
         prediction_df = pd.read_csv(trainer.model.predictions_csv_path)
         annotated_pdb_filepath = prediction_df["predicted_annotated_pdb_filepath"].iloc[-1]
         global_plddt = prediction_df["global_plddt"].iloc[-1].item()
@@ -167,7 +180,7 @@ def download_prediction(filename: str):
 @app.route("/server_predict", methods=["POST"])
 def predict_and_send_email():
     try:
-        global predict_cfg, model, plugins, strategy, trainer
+        global predict_cfg, af2_predict_cfg, datamodule, model, af2_model, plugins, strategy, trainer
 
         # extract input parameters from the request
         title = request.form.get("Title")
@@ -191,8 +204,13 @@ def predict_and_send_email():
             predict_cfg.data.predict_input_dir = predict_input_dir_
             predict_cfg.data.predict_true_dir = None
             predict_cfg.data.predict_output_dir = predict_output_dir_
+        with open_dict(af2_predict_cfg):
+            af2_predict_cfg.data.predict_input_dir = predict_input_dir_
+            af2_predict_cfg.data.predict_true_dir = None
+            af2_predict_cfg.data.predict_output_dir = predict_output_dir_
         shutil.move(save_location, new_save_location)
-        predict(predict_cfg)
+        af2_input = "af2_input" in other_parameters
+        predict(predict_cfg, af2_predict_cfg, af2_input=af2_input)
         prediction_df = pd.read_csv(trainer.model.predictions_csv_path)
         annotated_pdb_filepath = prediction_df["predicted_annotated_pdb_filepath"].iloc[-1]
         shutil.rmtree(predict_input_dir_)
@@ -214,23 +232,26 @@ def predict_and_send_email():
         return jsonify({"error": str(e)})
 
 
-@task_wrapper
-def predict(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+def predict(
+    cfg: DictConfig, af2_cfg: DictConfig, af2_input: bool = False
+) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """Predicts with given checkpoint on a datamodule predictset.
 
-    This method is wrapped in optional @task_wrapper decorator, that controls the behavior during
-    failure. Useful for multiruns, saving info about the crash, etc.
-
     :param cfg: DictConfig configuration composed by Hydra.
+    :param af2_cfg: DictConfig configuration composed by Hydra for AlphaFold 2 inputs.
+    :param af2_input: Whether an AlphaFold 2 structure has been provided for assessment.
     :return: Tuple[dict, dict] with metrics and dict with all instantiated objects.
     """
-    assert cfg.ckpt_path
+    assert cfg.ckpt_path and af2_cfg.ckpt_path, "Checkpoint paths not provided!"
 
-    log.info(f"Instantiating datamodule <{cfg.data._target_}>")
-    datamodule: LightningDataModule = hydra.utils.instantiate(cfg.data)
+    global datamodule, model, af2_model, plugins, strategy, trainer
 
-    global model, plugins, strategy, trainer
+    if datamodule is None:
+        log.info(f"Instantiating datamodule <{cfg.data._target_}>")
+        local_datamodule: LightningDataModule = hydra.utils.instantiate(cfg.data)
+        datamodule = local_datamodule
 
+    # load the general-purpose model
     if model is None:
         log.info(f"Instantiating model <{cfg.model._target_}>")
         with open_dict(cfg):
@@ -257,8 +278,40 @@ def predict(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
             map_location="cpu",
             strict=True,
             path_cfg=hydra.utils.instantiate(cfg.paths),
+            is_inference_run=True,
         )
         model = local_model
+
+    # load the AlphaFold-specialized model
+    if af2_model is None:
+        log.info(f"Instantiating model <{af2_cfg.model._target_}>")
+        with open_dict(af2_cfg):
+            af2_cfg.model.model_cfg = validate_config(af2_cfg.model.model_cfg)
+            af2_cfg.model.model_cfg.ablate_esm_embeddings = af2_cfg.data.ablate_esm_embeddings
+            af2_cfg.model.model_cfg.ablate_ankh_embeddings = af2_cfg.data.ablate_ankh_embeddings
+            af2_cfg.model.model_cfg.ablate_af2_plddt = af2_cfg.model.ablate_af2_plddt
+            af2_cfg.model.model_cfg.ablate_gtn = af2_cfg.model.ablate_gtn
+            af2_cfg.model.model_cfg.gtn_walk_length = af2_cfg.model.gtn_walk_length
+            af2_cfg.model.model_cfg.gtn_emb_dim = af2_cfg.model.gtn_emb_dim
+            af2_cfg.model.model_cfg.gtn_attn_type = af2_cfg.model.gtn_attn_type
+            af2_cfg.model.model_cfg.gtn_dropout = af2_cfg.model.gtn_dropout
+            af2_cfg.model.model_cfg.gtn_pe_dim = af2_cfg.model.gtn_pe_dim
+            af2_cfg.model.model_cfg.gtn_num_layers = af2_cfg.model.gtn_num_layers
+        benchmark_model = BenchMarkModel(af2_cfg.model.model_cfg)
+        af2_local_model: LightningModule = hydra.utils.instantiate(
+            af2_cfg.model,
+            model=benchmark_model,
+            path_cfg=af2_cfg.paths,
+        )
+        log.info("Loading checkpoint!")
+        af2_local_model = af2_local_model.load_from_checkpoint(
+            checkpoint_path=af2_cfg.ckpt_path,
+            map_location="cpu",
+            strict=True,
+            path_cfg=hydra.utils.instantiate(af2_cfg.paths),
+            is_inference_run=True,
+        )
+        af2_model = af2_local_model
 
     if plugins is None:
         local_plugins = None
@@ -306,15 +359,17 @@ def predict(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         )
         trainer = local_trainer
 
+    effective_model = af2_model if af2_model is not None and af2_input else model
     object_dict = {
         "cfg": cfg,
+        "af2_cfg": af2_cfg,
         "datamodule": datamodule,
-        "model": model,
+        "model": effective_model,
         "trainer": trainer,
     }
 
     log.info("Starting predictions!")
-    trainer.predict(model=model, datamodule=datamodule, ckpt_path=cfg.ckpt_path)
+    trainer.predict(model=effective_model, datamodule=datamodule)
     log.info(f"Predictions saved to: {trainer.model.predictions_csv_path}")
 
     metric_dict = trainer.callback_metrics

@@ -108,7 +108,7 @@ class GCPNetEMALitModule(LightningModule):
 
         # this line allows to access init params with `self.hparams` attribute
         # also ensures init params will be stored in ckpt
-        self.save_hyperparameters(logger=False)
+        self.save_hyperparameters(logger=False, ignore=["model"])
 
         # A `ProteinWorkshop` `LightningModule` #
         self.model = model
@@ -136,47 +136,53 @@ class GCPNetEMALitModule(LightningModule):
         # This is also required for the `BenchMarkModel` model to be able to load weights.
         # Otherwise, lazy layers will have their parameters reset.
         # Reference: https://pytorch.org/docs/stable/generated/torch.nn.modules.lazy.LazyModuleMixin.html#torch.nn.modules.lazy.LazyModuleMixin
-        print("Initializing `BenchMarkModel` lazy layers...")
-        with torch.no_grad():
-            batch = create_example_batch()
-            batch = self.model.featurise(batch)
-            out = self.model.encoder(batch)
-            # NOTE: lazy layers require us to manually construct the dummy input
-            # `Tensor` feature-by-feature (e.g., for the sake of feature ablations)
-            decoder_in = [out["node_embedding"]]
-            if not model_cfg.ablate_af2_plddt:
-                decoder_in.append(
-                    torch.zeros((batch.num_nodes, 1), device=self.device, dtype=torch.float32)
-                )
-            if not model_cfg.ablate_esm_embeddings:
-                decoder_in.append(
-                    torch.zeros((batch.num_nodes, 1280), device=self.device, dtype=torch.float32)
-                )
-            if (
-                hasattr(model_cfg, "ablate_ankh_embeddings")
-                and not model_cfg.ablate_ankh_embeddings
-            ):
-                decoder_in.append(
-                    torch.zeros((batch.num_nodes, 1536), device=self.device, dtype=torch.float32)
-                )
-            if hasattr(model_cfg, "ablate_gtn") and not model_cfg.ablate_gtn:
-                self.gtn_input_embedding(torch.cat(decoder_in, dim=-1))
-                decoder_in.append(
-                    torch.zeros(
-                        (batch.num_nodes, model_cfg.gtn_emb_dim),
-                        device=self.device,
-                        dtype=torch.float32,
+        if not ("is_inference_run" in kwargs and kwargs["is_inference_run"]):
+            print("Initializing `BenchMarkModel` lazy layers...")
+            with torch.no_grad():
+                batch = create_example_batch()
+                batch = self.model.featurise(batch)
+                out = self.model.encoder(batch)
+                # NOTE: lazy layers require us to manually construct the dummy input
+                # `Tensor` feature-by-feature (e.g., for the sake of feature ablations)
+                decoder_in = [out["node_embedding"]]
+                if not model_cfg.ablate_af2_plddt:
+                    decoder_in.append(
+                        torch.zeros((batch.num_nodes, 1), device=self.device, dtype=torch.float32)
                     )
-                )
-            decoder_in = torch.cat(decoder_in, dim=-1)
-            out = self.model.decoder["graph_regression"](decoder_in)
-            del batch, out
+                if not model_cfg.ablate_esm_embeddings:
+                    decoder_in.append(
+                        torch.zeros(
+                            (batch.num_nodes, 1280), device=self.device, dtype=torch.float32
+                        )
+                    )
+                if (
+                    hasattr(model_cfg, "ablate_ankh_embeddings")
+                    and not model_cfg.ablate_ankh_embeddings
+                ):
+                    decoder_in.append(
+                        torch.zeros(
+                            (batch.num_nodes, 1536), device=self.device, dtype=torch.float32
+                        )
+                    )
+                if hasattr(model_cfg, "ablate_gtn") and not model_cfg.ablate_gtn:
+                    self.gtn_input_embedding(torch.cat(decoder_in, dim=-1))
+                    decoder_in.append(
+                        torch.zeros(
+                            (batch.num_nodes, model_cfg.gtn_emb_dim),
+                            device=self.device,
+                            dtype=torch.float32,
+                        )
+                    )
+                decoder_in = torch.cat(decoder_in, dim=-1)
+                out = self.model.decoder["graph_regression"](decoder_in)
+                del batch, out
 
         # NOTE: we only want to load weights
         if (
             model_cfg.ckpt_path
             and model_cfg.ckpt_path != "none"
             and os.path.exists(model_cfg.ckpt_path)
+            and not ("is_inference_run" in kwargs and kwargs["is_inference_run"])
         ):
             log.info(f"Loading `BenchMarkModel` weights from checkpoint {model_cfg.ckpt_path}...")
             state_dict = torch.load(model_cfg.ckpt_path)["state_dict"]

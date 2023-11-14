@@ -151,10 +151,11 @@ def evaluate(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         map_location="cpu",
         strict=True,
         path_cfg=hydra.utils.instantiate(cfg.paths),
+        is_inference_run=True,
     )
 
     log.info("Starting testing!")
-    trainer.test(model=model, datamodule=datamodule, ckpt_path=cfg.ckpt_path)
+    trainer.test(model=model, datamodule=datamodule)
 
     metric_dict = trainer.callback_metrics
 
