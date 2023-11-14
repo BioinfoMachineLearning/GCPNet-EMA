@@ -611,8 +611,10 @@ class GCPNetEMALitModule(LightningModule):
         # define where the final predictions should be recorded
         self.predictions_csv_path = os.path.join(
             self.trainer.default_root_dir,
+            "server_predictions",
             f"{self.predict_phase}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_rank_{self.global_rank}_predictions.csv",
         )
+        os.makedirs(os.path.dirname(self.predictions_csv_path), exist_ok=True)
 
     @torch.inference_mode()
     @beartype

@@ -150,6 +150,7 @@ dmypy.json
 /lightning_logs/
 /logs/
 /outputs/
+/server_predictions/
 .env
 *.csv*
 checkpoints/*finetuned*.ckpt
