@@ -15,21 +15,18 @@
 <div class="row">
   <div class="mb-2 col-md-6 offset-md-3">
     <form action="/predict" method="POST" enctype="multipart/form-data">
+      {{ form.hidden_tag() }} {# Include the CSRF token #}
       <div class="input-group">
         <div class="custom-file">
-          <input type="file" name="file" accept=".jpg, .jpeg, .png" class="custom-file-input" id="inputGroupFile"
-            aria-describedby="inputGroupFileAddon04">
-          <label class="custom-file-label" for="inputGroupFile">Choose PDB file</label>
+          {{ form.file.label(class="custom-file-label", id="file-label") }}
+          {{ form.file(class="custom-file-input", id="file-input") }}
         </div>
         <div class="input-group-append">
-          <input type="submit" value="Upload"  class="btn btn-outline-secondary" type="button"
+          <input type="submit" value="Upload" class="btn btn-outline-secondary" type="button"
             id="inputGroupFileAddon04" />
         </div>
         <div class="form-check ml-2">
-          <input class="form-check-input" type="checkbox" value="" id="af2_input" name="af2_input">
-          <label class="form-check-label" for="af2_input">
-            Is AlphaFold Structure
-          </label>
+          {{ form.af2_input.label }} {{ form.af2_input() }}
         </div>
       </div>
     </form>
@@ -45,4 +42,15 @@
     </div>
   </div>
 </div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+      // When a file is selected, update the label text
+      document.getElementById("file-input").addEventListener("change", function () {
+          var filename = this.value.split("\\").pop();  // Get the filename from the full path
+          document.getElementById("file-label").innerText = filename;
+      });
+  });
+</script>
+
 {% endblock %}

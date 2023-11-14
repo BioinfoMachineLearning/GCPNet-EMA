@@ -192,6 +192,7 @@ dependencies:
       - fastapi==0.103.2
       - fastcore==1.5.29
       - flask==3.0.0
+      - Flask-WTF==1.2.1
       - foldcomp==0.0.5
       - fonttools==4.43.1
       - frozenlist==1.4.0
@@ -308,6 +309,7 @@ dependencies:
       - werkzeug==3.0.0
       - wget==3.2
       - wrapt==1.15.0
+      - wtforms==3.1.1
       - xarray==2023.9.0
       - xmltodict==0.13.0
       - xxhash==3.4.1

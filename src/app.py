@@ -5,20 +5,23 @@
 import copy
 import os
 import shutil
-import smtplib
 import tempfile
 import uuid
-from email import encoders
-from email.mime.base import MIMEBase
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 
 import hydra
 import pandas as pd
 import rootutils
-from beartype import beartype
-from beartype.typing import Any, Dict, List, Optional, Tuple
-from flask import Flask, jsonify, make_response, render_template, request
+from beartype.typing import Any, Dict, Optional, Tuple
+from flask import (
+    Flask,
+    flash,
+    jsonify,
+    make_response,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
 from hydra.core.global_hydra import GlobalHydra
 from hydra.core.hydra_config import HydraConfig
 from lightning import LightningDataModule, LightningModule, Trainer
@@ -52,10 +55,13 @@ from src import (
 )
 from src import resolve_omegaconf_variable
 from src.utils import RankedLogger
+from src.utils.email_utils import send_email
+from src.utils.form_utils import PredictForm
 
 log = RankedLogger(__name__, rank_zero_only=True)
 
 app = Flask(__name__)
+app.secret_key = os.environ["SERVER_SECRET_KEY"]  # Set the secret key for CSRF protection
 app.config["UPLOAD_FOLDER"] = "uploads"
 
 GlobalHydra.instance().clear()
@@ -87,41 +93,11 @@ predict_input_dir: str = os.path.join(tempfile.gettempdir(), "gcpnet-ema", "inpu
 predict_output_dir: str = os.path.join(tempfile.gettempdir(), "gcpnet-ema", "outputs")
 
 
-@beartype
-def send_email(
-    subject: str,
-    body: str,
-    sender: str,
-    recipients: List[str],
-    password: str,
-    output_file: str,
-):
-    # craft message
-    msg = MIMEMultipart()
-    msg["Subject"] = subject
-    msg["From"] = sender
-    msg["To"] = ", ".join(recipients)
-    msg.attach(MIMEText(body, "plain"))
-    # craft attachment
-    with open(output_file, "rb") as attachment:
-        part = MIMEBase("application", "octet-stream")
-        part.set_payload(attachment.read())
-    encoders.encode_base64(part)
-    part.add_header(
-        "Content-Disposition",
-        f"attachment; filename= {os.path.basename(output_file)}",
-    )
-    msg.attach(part)
-    # send email with message and attachment
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp_server:
-        smtp_server.login(sender, password)
-        smtp_server.sendmail(sender, recipients, msg.as_string())
-
-
 @app.route("/")
 def index():
     """Hosts a homepage."""
-    return render_template("index.html")
+    form = PredictForm()
+    return render_template("index.html", form=form)
 
 
 @app.route("/about")
@@ -135,34 +111,51 @@ def success():
     """Hosts an endpoint to make predictions for a given PDB file using a pre-trained
     checkpoint."""
     if request.method == "POST":
-        global predict_cfg, af2_predict_cfg, model, af2_model, plugins, strategy, trainer
-        f = request.files["file"]
-        save_location = f.filename
-        f.save(save_location)
-        os.makedirs(predict_input_dir, exist_ok=True)
-        os.makedirs(predict_output_dir, exist_ok=True)
-        new_save_location = os.path.join(predict_input_dir, os.path.basename(save_location))
-        with open_dict(predict_cfg):
-            predict_cfg.data.predict_input_dir = predict_input_dir
-            predict_cfg.data.predict_true_dir = None
-            predict_cfg.data.predict_output_dir = predict_output_dir
-        with open_dict(af2_predict_cfg):
-            af2_predict_cfg.data.predict_input_dir = predict_input_dir
-            af2_predict_cfg.data.predict_true_dir = None
-            af2_predict_cfg.data.predict_output_dir = predict_output_dir
-        shutil.move(save_location, new_save_location)
-        af2_input = "af2_input" in request.form
-        predict(predict_cfg, af2_predict_cfg, af2_input=af2_input)
-        prediction_df = pd.read_csv(trainer.model.predictions_csv_path)
-        annotated_pdb_filepath = prediction_df["predicted_annotated_pdb_filepath"].iloc[-1]
-        global_plddt = prediction_df["global_plddt"].iloc[-1].item()
-        shutil.rmtree(predict_input_dir)
-        shutil.rmtree(predict_output_dir)
-        return render_template(
-            "prediction.html",
-            annotated_pdb_name=os.path.basename(annotated_pdb_filepath),
-            global_plddt=f"{global_plddt:.2f}",
-        )
+        try:
+            # Create an instance of the form
+            form = PredictForm()
+
+            # Validate the form data
+            if form.validate_on_submit():
+                pdb_file = form.file.data
+                af2_input = form.af2_input.data
+
+                global predict_cfg, af2_predict_cfg, model, af2_model, plugins, strategy, trainer
+                save_location = pdb_file.filename
+                pdb_file.save(save_location)
+                os.makedirs(predict_input_dir, exist_ok=True)
+                os.makedirs(predict_output_dir, exist_ok=True)
+                new_save_location = os.path.join(
+                    predict_input_dir, os.path.basename(save_location)
+                )
+                with open_dict(predict_cfg):
+                    predict_cfg.data.predict_input_dir = predict_input_dir
+                    predict_cfg.data.predict_true_dir = None
+                    predict_cfg.data.predict_output_dir = predict_output_dir
+                with open_dict(af2_predict_cfg):
+                    af2_predict_cfg.data.predict_input_dir = predict_input_dir
+                    af2_predict_cfg.data.predict_true_dir = None
+                    af2_predict_cfg.data.predict_output_dir = predict_output_dir
+                shutil.move(save_location, new_save_location)
+                predict(predict_cfg, af2_predict_cfg, af2_input=af2_input)
+                prediction_df = pd.read_csv(trainer.model.predictions_csv_path)
+                annotated_pdb_filepath = prediction_df["predicted_annotated_pdb_filepath"].iloc[-1]
+                global_plddt = prediction_df["global_plddt"].iloc[-1].item()
+                shutil.rmtree(predict_input_dir)
+                shutil.rmtree(predict_output_dir)
+                return render_template(
+                    "prediction.html",
+                    annotated_pdb_name=os.path.basename(annotated_pdb_filepath),
+                    global_plddt=f"{global_plddt:.2f}",
+                )
+            else:
+                # Form data is not valid, handle the validation errors
+                flash("Form validation failed. Please check the form fields.")
+                return redirect(url_for("index"))
+
+        except Exception as e:
+            flash(f"An error occurred: {str(e)}")
+            return redirect(url_for("index"))
 
 
 @app.route("/download_prediction/<filename>")
