@@ -1,3 +1,7 @@
+# -------------------------------------------------------------------------------------------------------------------------------------
+# Following code curated for GCPNet-EMA (https://github.com/BioinfoMachineLearning/GCPNet-EMA):
+# -------------------------------------------------------------------------------------------------------------------------------------
+
 import os
 import ssl
 
@@ -74,9 +78,9 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     log.info(f"Instantiating model <{cfg.model._target_}>")
     with open_dict(cfg):
         cfg.model.model_cfg = validate_config(cfg.model.model_cfg)
-        cfg.model.model_cfg.ablate_af2_plddt = cfg.data.ablate_af2_plddt
         cfg.model.model_cfg.ablate_esm_embeddings = cfg.data.ablate_esm_embeddings
         cfg.model.model_cfg.ablate_ankh_embeddings = cfg.data.ablate_ankh_embeddings
+        cfg.model.model_cfg.ablate_af2_plddt = cfg.model.ablate_af2_plddt
         cfg.model.model_cfg.ablate_gtn = cfg.model.ablate_gtn
         cfg.model.model_cfg.gtn_walk_length = cfg.model.gtn_walk_length
         cfg.model.model_cfg.gtn_emb_dim = cfg.model.gtn_emb_dim

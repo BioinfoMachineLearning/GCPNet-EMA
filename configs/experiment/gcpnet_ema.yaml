@@ -28,12 +28,13 @@ model:
     decoder:
       graph_regression:
         dropout: 0.0
+  ablate_af2_plddt: true
+  ablate_gtn: true
   compile: false
 
 data:
   batch_size: 16
   num_workers: 4
-  ablate_af2_plddt: true
   ablate_ankh_embeddings: true
   ablate_esm_embeddings: true
 

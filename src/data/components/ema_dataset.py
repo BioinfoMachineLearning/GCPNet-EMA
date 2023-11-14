@@ -306,7 +306,6 @@ class EMADataset(Dataset):
         pdbtools_dir: Optional[str] = None,
         subset_to_ca_atoms_only: bool = False,
         structures_batches_for_protein_workshop: bool = False,
-        ablate_af2_plddt: bool = False,
         ablate_esm_embeddings: bool = False,
         ablate_ankh_embeddings: bool = False,
     ):
@@ -326,7 +325,6 @@ class EMADataset(Dataset):
         self.pdbtools_dir = pdbtools_dir
         self.subset_to_ca_atoms_only = subset_to_ca_atoms_only
         self.structures_batches_for_protein_workshop = structures_batches_for_protein_workshop
-        self.ablate_af2_plddt = ablate_af2_plddt
         self.ablate_esm_embeddings = ablate_esm_embeddings
         self.ablate_ankh_embeddings = ablate_ankh_embeddings
         self.num_pdbs = len(self.decoy_pdbs)
@@ -698,7 +696,6 @@ class EMADataset(Dataset):
     @beartype
     def structure_data_for_protein_workshop(
         data: Data,
-        ablate_af2_plddt: bool = False,
         ablate_esm_embeddings: bool = False,
         ablate_ankh_embeddings: bool = False,
         coords_fill_value: float = 1e-5,
@@ -706,7 +703,6 @@ class EMADataset(Dataset):
         """Structure data for `ProteinWorkshop` models.
 
         :param data: `Data` collection
-        :param ablate_af2_plddt: whether to ablate AlphaFold2 plDDT values
         :param ablate_esm_embeddings: whether to ablate ESM embeddings
         :param ablate_ankh_embeddings: whether to ablate Ankh embeddings
         :param coords_fill_value: coordinates fill value
@@ -726,9 +722,7 @@ class EMADataset(Dataset):
         )
         restructured_data.pos = restructured_data.coords[:, 1, :]
         restructured_data.alphafold_plddt_per_residue = (
-            None
-            if ablate_af2_plddt
-            else data.decoy_protein_alphafold_per_residue_plddt.view(-1, 14)[:, 1].unsqueeze(-1)
+            data.decoy_protein_alphafold_per_residue_plddt.view(-1, 14)[:, 1].unsqueeze(-1)
         )
         restructured_data.esm_embedding_per_residue = (
             None
@@ -942,7 +936,6 @@ class EMADataset(Dataset):
         if self.structures_batches_for_protein_workshop:
             data = self.structure_data_for_protein_workshop(
                 data,
-                ablate_af2_plddt=self.ablate_af2_plddt,
                 ablate_esm_embeddings=self.ablate_esm_embeddings,
                 ablate_ankh_embeddings=self.ablate_ankh_embeddings,
             )

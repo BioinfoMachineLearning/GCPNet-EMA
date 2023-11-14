@@ -26,10 +26,10 @@ data:
   lddt_exec_path: /home/acmwhb/mambaforge/envs/GCPNet-EMA/bin/lddt
   pdbtools_dir: /home/acmwhb/mambaforge/envs/GCPNet-EMA/lib/python3.10/site-packages/pdbtools/
   structures_batches_for_protein_workshop: true
-  ablate_af2_plddt: true
   ablate_esm_embeddings: true
   ablate_ankh_embeddings: true
 model:
+  ablate_af2_plddt: true
   ablate_gtn: true
 logger: csv
 trainer:

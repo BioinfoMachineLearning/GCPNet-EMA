@@ -1,3 +1,7 @@
+# -------------------------------------------------------------------------------------------------------------------------------------
+# Following code curated for GCPNet-EMA (https://github.com/BioinfoMachineLearning/GCPNet-EMA):
+# -------------------------------------------------------------------------------------------------------------------------------------
+
 import os
 import shutil
 import smtplib
@@ -73,6 +77,37 @@ trainer: Optional[Trainer] = None
 
 predict_input_dir: str = os.path.join(tempfile.gettempdir(), "gcpnet-ema", "inputs")
 predict_output_dir: str = os.path.join(tempfile.gettempdir(), "gcpnet-ema", "outputs")
+
+
+@beartype
+def send_email(
+    subject: str,
+    body: str,
+    sender: str,
+    recipients: List[str],
+    password: str,
+    output_file: str,
+):
+    # craft message
+    msg = MIMEMultipart()
+    msg["Subject"] = subject
+    msg["From"] = sender
+    msg["To"] = ", ".join(recipients)
+    msg.attach(MIMEText(body, "plain"))
+    # craft attachment
+    with open(output_file, "rb") as attachment:
+        part = MIMEBase("application", "octet-stream")
+        part.set_payload(attachment.read())
+    encoders.encode_base64(part)
+    part.add_header(
+        "Content-Disposition",
+        f"attachment; filename= {os.path.basename(output_file)}",
+    )
+    msg.attach(part)
+    # send email with message and attachment
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp_server:
+        smtp_server.login(sender, password)
+        smtp_server.sendmail(sender, recipients, msg.as_string())
 
 
 @app.route("/")
@@ -163,36 +198,6 @@ def predict_and_send_email():
         shutil.rmtree(predict_input_dir_)
         shutil.rmtree(predict_output_dir_)
 
-        @beartype
-        def send_email(
-            subject: str,
-            body: str,
-            sender: str,
-            recipients: List[str],
-            password: str,
-            output_file: str,
-        ):
-            # craft message
-            msg = MIMEMultipart()
-            msg["Subject"] = subject
-            msg["From"] = sender
-            msg["To"] = ", ".join(recipients)
-            msg.attach(MIMEText(body, "plain"))
-            # craft attachment
-            with open(output_file, "rb") as attachment:
-                part = MIMEBase("application", "octet-stream")
-                part.set_payload(attachment.read())
-            encoders.encode_base64(part)
-            part.add_header(
-                "Content-Disposition",
-                f"attachment; filename= {os.path.basename(output_file)}",
-            )
-            msg.attach(part)
-            # send email with message and attachment
-            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp_server:
-                smtp_server.login(sender, password)
-                smtp_server.sendmail(sender, recipients, msg.as_string())
-
         # send the annotated PDB file as an email attachment
         send_email(
             subject=title,
@@ -230,9 +235,9 @@ def predict(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         log.info(f"Instantiating model <{cfg.model._target_}>")
         with open_dict(cfg):
             cfg.model.model_cfg = validate_config(cfg.model.model_cfg)
-            cfg.model.model_cfg.ablate_af2_plddt = cfg.data.ablate_af2_plddt
             cfg.model.model_cfg.ablate_esm_embeddings = cfg.data.ablate_esm_embeddings
             cfg.model.model_cfg.ablate_ankh_embeddings = cfg.data.ablate_ankh_embeddings
+            cfg.model.model_cfg.ablate_af2_plddt = cfg.model.ablate_af2_plddt
             cfg.model.model_cfg.ablate_gtn = cfg.model.ablate_gtn
             cfg.model.model_cfg.gtn_walk_length = cfg.model.gtn_walk_length
             cfg.model.model_cfg.gtn_emb_dim = cfg.model.gtn_emb_dim
@@ -309,7 +314,7 @@ def predict(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     }
 
     log.info("Starting predictions!")
-    trainer.predict(model=model, datamodule=datamodule)
+    trainer.predict(model=model, datamodule=datamodule, ckpt_path=cfg.ckpt_path)
     log.info(f"Predictions saved to: {trainer.model.predictions_csv_path}")
 
     metric_dict = trainer.callback_metrics

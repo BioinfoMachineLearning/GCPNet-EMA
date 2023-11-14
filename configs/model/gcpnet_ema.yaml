@@ -17,7 +17,8 @@ scheduler:
 compile: false
 
 # graph transformer network (GTN) arguments
-ablate_gtn: false
+ablate_af2_plddt: true
+ablate_gtn: true
 gtn_emb_dim: 64
 gtn_attn_type: multihead # or "performer"
 gtn_dropout: 0.5
