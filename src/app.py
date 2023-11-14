@@ -56,7 +56,7 @@ from src import (
 from src import resolve_omegaconf_variable
 from src.utils import RankedLogger
 from src.utils.email_utils import send_email
-from src.utils.form_utils import PredictForm
+from src.utils.form_utils import PredictForm, ServerPredictForm
 
 log = RankedLogger(__name__, rank_zero_only=True)
 
@@ -112,10 +112,10 @@ def success():
     checkpoint."""
     if request.method == "POST":
         try:
-            # Create an instance of the form
+            # create an instance of the prediction form
             form = PredictForm()
 
-            # Validate the form data
+            # validate the form data
             if form.validate_on_submit():
                 pdb_file = form.file.data
                 af2_input = form.af2_input.data
@@ -149,7 +149,7 @@ def success():
                     global_plddt=f"{global_plddt:.2f}",
                 )
             else:
-                # Form data is not valid, handle the validation errors
+                # form data is not valid, handle the validation errors
                 flash("Form validation failed. Please check the form fields.")
                 return redirect(url_for("index"))
 
@@ -175,51 +175,58 @@ def predict_and_send_email():
     try:
         global predict_cfg, af2_predict_cfg, datamodule, model, af2_model, plugins, strategy, trainer
 
-        # extract input parameters from the request
-        title = request.form.get("Title")
-        structure_upload = request.files["Structure Upload"]
-        sequence = request.form.get("Sequence")
-        results_email = request.form.get("Results Email")
-        other_parameters = request.form.get("Other Parameters")
+        # validate form data
+        form = ServerPredictForm(request.form)
+        if form.validate_on_submit():
+            # extract input parameters from the request
+            title = form.title.data
+            structure_upload = request.files["Structure Upload"]
+            sequence = form.sequence.data  # NOTE: we currently do not use the provided sequence
+            results_email = form.results_email.data
+            other_parameters = form.other_parameters.data
 
-        # make predictions
-        unique_id = str(uuid.uuid4())
-        predict_input_dir_ = os.path.join(predict_input_dir, f"{title}_{unique_id}")
-        predict_output_dir_ = os.path.join(predict_output_dir, f"{title}_{unique_id}")
-        os.makedirs(predict_input_dir_, exist_ok=True)
-        os.makedirs(predict_output_dir_, exist_ok=True)
-        save_location = os.path.join(
-            predict_input_dir_, f"{unique_id}_{structure_upload.filename}"
-        )
-        new_save_location = os.path.join(predict_input_dir_, os.path.basename(save_location))
-        structure_upload.save(save_location)
-        with open_dict(predict_cfg):
-            predict_cfg.data.predict_input_dir = predict_input_dir_
-            predict_cfg.data.predict_true_dir = None
-            predict_cfg.data.predict_output_dir = predict_output_dir_
-        with open_dict(af2_predict_cfg):
-            af2_predict_cfg.data.predict_input_dir = predict_input_dir_
-            af2_predict_cfg.data.predict_true_dir = None
-            af2_predict_cfg.data.predict_output_dir = predict_output_dir_
-        shutil.move(save_location, new_save_location)
-        af2_input = "af2_input" in other_parameters
-        predict(predict_cfg, af2_predict_cfg, af2_input=af2_input)
-        prediction_df = pd.read_csv(trainer.model.predictions_csv_path)
-        annotated_pdb_filepath = prediction_df["predicted_annotated_pdb_filepath"].iloc[-1]
-        shutil.rmtree(predict_input_dir_)
-        shutil.rmtree(predict_output_dir_)
+            # make predictions
+            unique_id = str(uuid.uuid4())
+            predict_input_dir_ = os.path.join(predict_input_dir, f"{title}_{unique_id}")
+            predict_output_dir_ = os.path.join(predict_output_dir, f"{title}_{unique_id}")
+            os.makedirs(predict_input_dir_, exist_ok=True)
+            os.makedirs(predict_output_dir_, exist_ok=True)
+            save_location = os.path.join(
+                predict_input_dir_, f"{unique_id}_{structure_upload.filename}"
+            )
+            new_save_location = os.path.join(predict_input_dir_, os.path.basename(save_location))
+            structure_upload.save(save_location)
+            with open_dict(predict_cfg):
+                predict_cfg.data.predict_input_dir = predict_input_dir_
+                predict_cfg.data.predict_true_dir = None
+                predict_cfg.data.predict_output_dir = predict_output_dir_
+            with open_dict(af2_predict_cfg):
+                af2_predict_cfg.data.predict_input_dir = predict_input_dir_
+                af2_predict_cfg.data.predict_true_dir = None
+                af2_predict_cfg.data.predict_output_dir = predict_output_dir_
+            shutil.move(save_location, new_save_location)
+            af2_input = "af2_input" in other_parameters
+            predict(predict_cfg, af2_predict_cfg, af2_input=af2_input)
+            prediction_df = pd.read_csv(trainer.model.predictions_csv_path)
+            annotated_pdb_filepath = prediction_df["predicted_annotated_pdb_filepath"].iloc[-1]
+            shutil.rmtree(predict_input_dir_)
+            shutil.rmtree(predict_output_dir_)
 
-        # send the annotated PDB file as an email attachment
-        send_email(
-            subject=title,
-            body="job complete",
-            sender=os.environ["SERVER_EMAIL_ADDRESS"],
-            recipients=[results_email],
-            password=os.environ["SERVER_EMAIL_PASSWORD"],
-            output_file=annotated_pdb_filepath,
-        )
+            # send the annotated PDB file as an email attachment
+            send_email(
+                subject=title,
+                body="job complete",
+                sender=os.environ["SERVER_EMAIL_ADDRESS"],
+                recipients=[results_email],
+                password=os.environ["SERVER_EMAIL_PASSWORD"],
+                output_file=annotated_pdb_filepath,
+            )
 
-        return jsonify({"message": "Prediction completed and email sent."})
+            return jsonify({"message": "Prediction completed and email sent."})
+
+        else:
+            # form data is not valid, return validation errors
+            return jsonify({"error": form.errors})
 
     except Exception as e:
         return jsonify({"error": str(e)})
