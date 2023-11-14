@@ -20,12 +20,18 @@ class PdbFileValidator:
     """Custom validator for PDB files."""
 
     def __call__(self, form, field):
+        # reset the file position to the beginning
+        field.data.seek(0)
+
         # check if the file content follows the PDB file format (a basic check)
         pdb_content = field.data.read().decode("utf-8")
 
         # NOTE: you may want to implement a more sophisticated check based on the PDB file format
         if not re.search(r"^ATOM|^HETATM", pdb_content, re.MULTILINE):
             raise ValidationError("Invalid PDB file format")
+
+        # reset the file position to the beginning
+        field.data.seek(0)
 
 
 class PredictForm(FlaskForm):

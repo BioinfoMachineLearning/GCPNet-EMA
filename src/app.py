@@ -61,8 +61,9 @@ from src.utils.form_utils import PredictForm, ServerPredictForm
 log = RankedLogger(__name__, rank_zero_only=True)
 
 app = Flask(__name__)
-app.secret_key = os.environ["SERVER_SECRET_KEY"]  # Set the secret key for CSRF protection
+app.secret_key = os.environ["SERVER_SECRET_KEY"]  # set the secret key for CSRF protection
 app.config["UPLOAD_FOLDER"] = "uploads"
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # e.g., 16 MB limit
 
 GlobalHydra.instance().clear()
 
