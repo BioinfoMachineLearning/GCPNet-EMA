@@ -107,7 +107,6 @@ dependencies:
   - platformdirs=3.11.0=pyhd8ed1ab_0
   - pluggy=1.3.0=pyhd8ed1ab_0
   - pre-commit=3.4.0=pyha770c72_2
-  - protobuf=4.24.3=py310h620c231_0
   - psutil=5.9.5=py310h2372a71_1
   - pthread-stubs=0.4=h36c2ea0_1001
   - pycparser=2.21=pyhd8ed1ab_0
