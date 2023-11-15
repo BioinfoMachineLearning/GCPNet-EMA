@@ -30,9 +30,6 @@ class PdbFileValidator:
         if not re.search(r"^ATOM|^HETATM", pdb_content, re.MULTILINE):
             raise ValidationError("Invalid PDB file format")
 
-        # reset the file position to the beginning
-        field.data.seek(0)
-
 
 class PredictForm(FlaskForm):
     """UI Prediction Form."""
@@ -57,9 +54,14 @@ class ServerPredictForm(FlaskForm):
         validators=[
             FileRequired(),
             FileAllowed(["pdb"], "Only PDB (.pdb) files are allowed."),
-            PdbFileValidator(),
         ],
     )
-    sequence = StringField("Sequence", validators=[DataRequired(), Length(min=0, max=10000)])
+    sequence = StringField("Sequence", validators=[Length(min=0, max=10000)])
     results_email = StringField("Results Email", validators=[DataRequired(), Email()])
     other_parameters = StringField("Other Parameters", validators=[Length(min=0, max=10000)])
+
+    # disable CSRF protection for this form only
+    class Meta:
+        """Meta class."""
+
+        csrf = False

@@ -22,6 +22,7 @@ from flask import (
     request,
     url_for,
 )
+from flask_wtf.csrf import CSRFProtect
 from hydra.core.global_hydra import GlobalHydra
 from hydra.core.hydra_config import HydraConfig
 from lightning import LightningDataModule, LightningModule, Trainer
@@ -64,6 +65,8 @@ app = Flask(__name__)
 app.secret_key = os.environ["SERVER_SECRET_KEY"]  # set the secret key for CSRF protection
 app.config["UPLOAD_FOLDER"] = "uploads"
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # e.g., 16 MB limit
+
+csrf = CSRFProtect(app)
 
 GlobalHydra.instance().clear()
 
@@ -172,16 +175,19 @@ def download_prediction(filename: str):
 
 
 @app.route("/server_predict", methods=["POST"])
+@csrf.exempt
 def predict_and_send_email():
     try:
         global predict_cfg, af2_predict_cfg, datamodule, model, af2_model, plugins, strategy, trainer
 
+        # create an instance of the server prediction form
+        form = ServerPredictForm()
+
         # validate form data
-        form = ServerPredictForm(request.form)
         if form.validate_on_submit():
             # extract input parameters from the request
             title = form.title.data
-            structure_upload = request.files["Structure Upload"]
+            structure_upload = form.data["structure_upload"]
             sequence = form.sequence.data  # NOTE: we currently do not use the provided sequence
             results_email = form.results_email.data
             other_parameters = form.other_parameters.data
@@ -206,7 +212,7 @@ def predict_and_send_email():
                 af2_predict_cfg.data.predict_true_dir = None
                 af2_predict_cfg.data.predict_output_dir = predict_output_dir_
             shutil.move(save_location, new_save_location)
-            af2_input = "af2_input" in other_parameters
+            af2_input = other_parameters is not None and "af2_input" in other_parameters
             predict(predict_cfg, af2_predict_cfg, af2_input=af2_input)
             prediction_df = pd.read_csv(trainer.model.predictions_csv_path)
             annotated_pdb_filepath = prediction_df["predicted_annotated_pdb_filepath"].iloc[-1]
@@ -227,10 +233,10 @@ def predict_and_send_email():
 
         else:
             # form data is not valid, return validation errors
-            return jsonify({"error": form.errors})
+            return jsonify({"Validation server error": form.errors})
 
     except Exception as e:
-        return jsonify({"error": str(e)})
+        return jsonify({"General server error": str(e)})
 
 
 def predict(
