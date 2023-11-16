@@ -105,7 +105,7 @@ python3 src/eval.py data=ema model=gcpnet_ema logger=csv trainer.accelerator=gpu
 python3 src/eval.py data=ema model=gcpnet_ema logger=csv trainer.accelerator=gpu trainer.devices=1 ckpt_path="$af2_ema_model_ckpt_path"
 ```
 
-````bash
+```bash
 Default EMA Model - No AlphaFold plDDT or ESM Embeddings as Inputs
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃          Test metric           ┃          DataLoader 0          ┃
@@ -131,6 +131,7 @@ AlphaFold EMA Model - No ESM Embeddings as Inputs
 │ test/PerResiduePearsonCorrCoef │       0.7482331991195679       │
 │           test/loss            │      0.004621841479092836      │
 └────────────────────────────────┴────────────────────────────────┘
+```
 
 ### How to predict lDDT scores for protein structures using `GCPNet-EMA`
 
@@ -142,7 +143,7 @@ predict_batch_size=1  # adjust as desired according to available GPU memory
 num_workers=0  # note: required when initially processing new PDB file inputs, due to ESM's GPU usage
 
 python3 src/predict.py model=gcpnet_ema data=ema data.predict_input_dir=$MY_INPUT_PDB_DIR data.predict_true_dir=$MY_OPTIONAL_TRUE_PDB_DIR data.predict_output_dir=$MY_OUTPUTS_DIR data.predict_batch_size=$predict_batch_size data.num_workers=$num_workers logger=csv trainer.accelerator=gpu trainer.devices=1 ckpt_path="$default_ema_model_ckpt_path"
-````
+```
 
 For example, one can predict per-residue and per-model lDDT scores for a batch of tertiary protein structure inputs, `6W6VE.pdb` and `6W77K.pdb` within `data/EMA/examples/decoy_model`, as follows
 
