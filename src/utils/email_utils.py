@@ -4,6 +4,7 @@
 
 import os
 import smtplib
+import ssl
 from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
@@ -14,22 +15,24 @@ from beartype.typing import List
 
 
 @beartype
-def send_email(
+def send_email_with_attachment(
     subject: str,
     body: str,
     sender: str,
     recipients: List[str],
-    password: str,
     output_file: str,
+    smtp_server: str = "massmail.missouri.edu",
+    port: int = 587,
 ):
-    """Send email with attachment.
+    """Send email with attachment using `massmail`.
 
     :param subject: Subject of email.
     :param body: Body of email.
     :param sender: Sender email address.
     :param recipients: List of recipient email addresses.
-    :param password: Password for sender email address.
     :param output_file: Path to output file to attach to email.
+    :param smtp_server: SMTP server to use for sending email.
+    :param port: Port to use for SMTP. This is required for `starttls()`.
     """
     # craft message
     msg = MIMEMultipart()
@@ -48,6 +51,7 @@ def send_email(
     )
     msg.attach(part)
     # send email with message and attachment
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp_server:
-        smtp_server.login(sender, password)
-        smtp_server.sendmail(sender, recipients, msg.as_string())
+    context = ssl.create_default_context()
+    with smtplib.SMTP(smtp_server, port) as server:
+        server.starttls(context=context)
+        server.sendmail(sender, recipients, msg.as_string())

@@ -56,7 +56,7 @@ from src import (
 )
 from src import resolve_omegaconf_variable
 from src.utils import RankedLogger
-from src.utils.email_utils import send_email
+from src.utils.email_utils import send_email_with_attachment
 from src.utils.form_utils import PredictForm, ServerPredictForm
 
 log = RankedLogger(__name__, rank_zero_only=True)
@@ -220,13 +220,14 @@ def predict_and_send_email():
             shutil.rmtree(predict_output_dir_)
 
             # send the annotated PDB file as an email attachment
-            send_email(
+            send_email_with_attachment(
                 subject=title,
                 body="job complete",
                 sender=os.environ["SERVER_EMAIL_ADDRESS"],
                 recipients=[results_email],
-                password=os.environ["SERVER_EMAIL_PASSWORD"],
                 output_file=annotated_pdb_filepath,
+                smtp_server=os.environ["SERVER_EMAIL_SMTP_SERVER"],
+                port=int(os.environ["SERVER_EMAIL_PORT"]),
             )
 
             return jsonify({"message": "Prediction completed and email sent."})
