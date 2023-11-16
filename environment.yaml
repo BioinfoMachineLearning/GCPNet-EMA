@@ -76,7 +76,6 @@ dependencies:
   - libnsl=2.0.0=hd590300_1
   - libnvjpeg=11.9.0.86=0
   - libpng=1.6.39=h753d276_0
-  - libprotobuf=4.24.3=hf27288f_0
   - libsqlite=3.43.0=h2797004_0
   - libstdcxx-ng=13.2.0=h7e041cc_2
   - libtiff=4.5.0=h6adf6a1_2

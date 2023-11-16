@@ -56,6 +56,9 @@ pip3 install -e .
 
 # install ProDy separately to avoid a Biopython version conflict with Ankh
 pip3 install prody==2.4.1
+
+# uninstall protobuf (if installed) due to (potential) local GLIBCXX conflicts
+pip3 uninstall protobuf
 ```
 
 **Note**: TM-score is required to score predicted protein structures, where one can install it as follows:
