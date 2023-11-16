@@ -115,13 +115,16 @@ class EMADataModule(LightningDataModule):
         """
         split_entries = []
         for item in os.listdir(decoy_dir):
-            decoy_pdb_filepath = os.path.join(decoy_dir, item)
-            true_pdb_filepath = (
-                os.path.join(true_dir, item)
-                if true_dir and os.path.exists(os.path.join(true_dir, item))
-                else None
-            )
-            split_entries.append({"decoy_pdb": decoy_pdb_filepath, "true_pdb": true_pdb_filepath})
+            if item.endswith(".pdb"):
+                decoy_pdb_filepath = os.path.join(decoy_dir, item)
+                true_pdb_filepath = (
+                    os.path.join(true_dir, item)
+                    if true_dir and os.path.exists(os.path.join(true_dir, item))
+                    else None
+                )
+                split_entries.append(
+                    {"decoy_pdb": decoy_pdb_filepath, "true_pdb": true_pdb_filepath}
+                )
         return split_entries
 
     def setup(self, stage: Optional[str] = None):
