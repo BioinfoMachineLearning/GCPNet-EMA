@@ -2,33 +2,10 @@
 # Following code curated for GCPNet-EMA (https://github.com/BioinfoMachineLearning/GCPNet-EMA):
 # -------------------------------------------------------------------------------------------------------------------------------------
 
-import re
-
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileAllowed, FileField, FileRequired
 from wtforms import BooleanField, StringField
-from wtforms.validators import (
-    DataRequired,
-    Email,
-    InputRequired,
-    Length,
-    ValidationError,
-)
-
-
-class PdbFileValidator:
-    """Custom validator for PDB files."""
-
-    def __call__(self, form, field):
-        # reset the file position to the beginning
-        field.data.seek(0)
-
-        # check if the file content follows the PDB file format (a basic check)
-        pdb_content = field.data.read().decode("utf-8")
-
-        # NOTE: you may want to implement a more sophisticated check based on the PDB file format
-        if not re.search(r"^ATOM|^HETATM", pdb_content, re.MULTILINE):
-            raise ValidationError("Invalid PDB file format")
+from wtforms.validators import DataRequired, Email, InputRequired, Length
 
 
 class PredictForm(FlaskForm):
@@ -39,7 +16,6 @@ class PredictForm(FlaskForm):
         validators=[
             InputRequired("File is required."),
             FileAllowed(["pdb"], "Only PDB (.pdb) files are allowed."),
-            PdbFileValidator(),
         ],
     )
     af2_input = BooleanField("Is AlphaFold Structure")
