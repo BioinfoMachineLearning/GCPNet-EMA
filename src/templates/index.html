@@ -28,6 +28,9 @@
         <div class="form-check ml-2">
           {{ form.af2_input.label }} {{ form.af2_input() }}
         </div>
+        <div class="form-check ml-2">
+          {{ form.cameo_input.label }} {{ form.cameo_input() }}
+        </div>
       </div>
     </form>
   </div>
@@ -35,8 +38,8 @@
     <div class="col-sm-6 offset-sm-3 my-5">
       <center>
         <p class="text-muted">
-          By default, this application uses the latest version of GCPNet, GCPNet++, to make predictions
-          of the per-residue lDDT scores for each chain in a given PDB file.
+          For compatibility purposes, this application defaults to returning CAMEO-style per-residue structural deviations approximately in Angstroms.
+          Disabling this option will instead return AlphaFold-style per-residue plDDT scores.
         </p>
       </center>
     </div>

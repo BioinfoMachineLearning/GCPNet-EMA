@@ -23,7 +23,7 @@ from omegaconf import DictConfig
 from proteinworkshop.datasets.utils import create_example_batch
 from torch_scatter import scatter
 
-from src.data.components.ema_dataset import MAX_PLDDT_VALUE
+from src.data.components.ema_dataset import CAMEO_ACCURACY_SCALE_FACTOR, MAX_PLDDT_VALUE
 from src.models import HALT_FILE_EXTENSION, annotate_pdb_with_new_column_values
 from src.models.components.gps import GPS
 from src.utils import RankedLogger
@@ -115,6 +115,7 @@ class GCPNetEMALitModule(LightningModule):
         self.ablate_esm_embeddings = model_cfg.ablate_esm_embeddings
         self.ablate_ankh_embeddings = model_cfg.ablate_ankh_embeddings
         self.ablate_gtn = model_cfg.ablate_gtn
+        self.return_cameo_accuracy = kwargs.get("return_cameo_accuracy", False)
 
         # A `ProteinWorkshop` `LightningModule` #
         self.model = model
@@ -648,7 +649,11 @@ class GCPNetEMALitModule(LightningModule):
 
         # collect outputs, and visualize predicted lDDT scores
         step_outputs = self.record_ema_preds(
-            batch=batch, res_preds=preds, global_preds=global_preds, loss=loss, labels=labels
+            batch=batch,
+            res_preds=preds,
+            global_preds=global_preds,
+            loss=loss,
+            labels=labels,
         )
         # collect outputs
         step_outputs_list = getattr(self, f"{self.predict_phase}_step_outputs")
@@ -677,6 +682,7 @@ class GCPNetEMALitModule(LightningModule):
         loss: Optional[torch.Tensor] = None,
         labels: Optional[torch.Tensor] = None,
         plddt_scale_factor: float = MAX_PLDDT_VALUE,
+        cameo_accuracy_scale_factor: float = CAMEO_ACCURACY_SCALE_FACTOR,
     ) -> List[Dict[str, Any]]:
         """Record EMA predictions for protein structure models.
 
@@ -686,6 +692,7 @@ class GCPNetEMALitModule(LightningModule):
         :param loss: The loss.
         :param labels: The labels.
         :param plddt_scale_factor: The scale factor for plDDT values.
+        :param cameo_accuracy_scale_factor: The scale factor for CAMEO-style accuracy values.
         :return: A list of dictionaries containing the EMA predictions.
         """
         # create temporary output PDB files for predictions
@@ -711,17 +718,38 @@ class GCPNetEMALitModule(LightningModule):
             true_path = str(temp_pdb_dir / Path(f"true_{temp_pdb_code}").with_suffix(".pdb"))
             # isolate each individual example within the current batch
             if initial_res_scores is not None:
-                initial_res_scores_ = (
-                    initial_res_scores[res_batch_index == b_index] * plddt_scale_factor
-                )
-            pred_res_scores_ = pred_res_scores[res_batch_index == b_index] * plddt_scale_factor
-            pred_global_score_ = pred_global_scores[b_index] * plddt_scale_factor
+                if self.return_cameo_accuracy:
+                    initial_res_scores_ = (
+                        1.0 - initial_res_scores[res_batch_index == b_index]
+                    ) * cameo_accuracy_scale_factor
+                else:
+                    initial_res_scores_ = (
+                        initial_res_scores[res_batch_index == b_index] * plddt_scale_factor
+                    )
+            if self.return_cameo_accuracy:
+                pred_res_scores_ = (
+                    1.0 - pred_res_scores[res_batch_index == b_index]
+                ) * cameo_accuracy_scale_factor
+                pred_global_score_ = (
+                    1.0 - pred_global_scores[b_index]
+                ) * cameo_accuracy_scale_factor
+            else:
+                pred_res_scores_ = pred_res_scores[res_batch_index == b_index] * plddt_scale_factor
+                pred_global_score_ = pred_global_scores[b_index] * plddt_scale_factor
             loss_ = np.nan if batch_loss is None else batch_loss[b_index]
-            labels_ = (
-                None
-                if batch_labels is None
-                else batch_labels[res_batch_index == b_index] * plddt_scale_factor
-            )
+            if self.return_cameo_accuracy:
+                labels_ = (
+                    None
+                    if batch_labels is None
+                    else (1.0 - batch_labels[res_batch_index == b_index])
+                    * cameo_accuracy_scale_factor
+                )
+            else:
+                labels_ = (
+                    None
+                    if batch_labels is None
+                    else batch_labels[res_batch_index == b_index] * plddt_scale_factor
+                )
             annotate_pdb_with_new_column_values(
                 input_pdb_filepath=initial_pdb_filepath,
                 output_pdb_filepath=prediction_path,
@@ -735,12 +763,11 @@ class GCPNetEMALitModule(LightningModule):
                     column_name="b_factor",
                     new_column_values=labels_,
                 )
+                ae_divisor = 1.0 if self.return_cameo_accuracy else plddt_scale_factor
                 initial_per_res_plddt_ae = (
-                    np.abs(initial_res_scores_ - labels_).mean() / plddt_scale_factor
+                    np.abs(initial_res_scores_ - labels_).mean() / ae_divisor
                 )
-                pred_per_res_plddt_ae = (
-                    np.abs(pred_res_scores_ - labels_).mean() / plddt_scale_factor
-                )
+                pred_per_res_plddt_ae = np.abs(pred_res_scores_ - labels_).mean() / ae_divisor
             else:
                 true_path = None
                 initial_per_res_plddt_ae = None
