@@ -48,7 +48,7 @@ git clone https://github.com/BioinfoMachineLearning/GCPNet-EMA
 cd GCPNet-EMA
 
 # create conda environment
-mamba env create -f environment.yaml
+mamba env create -f environment.yaml # NOTE: use `cpu_environment.yaml` instead for web server deployment
 conda activate GCPNet-EMA  # NOTE: one still needs to use `conda` to (de)activate environments
 
 # install local project as package
