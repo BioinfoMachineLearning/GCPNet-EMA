@@ -185,7 +185,7 @@ class GCPNetEMALitModule(LightningModule):
             and not ("is_inference_run" in kwargs and kwargs["is_inference_run"])
         ):
             log.info(f"Loading `BenchMarkModel` weights from checkpoint {model_cfg.ckpt_path}...")
-            state_dict = torch.load(model_cfg.ckpt_path)["state_dict"]
+            state_dict = torch.load(model_cfg.ckpt_path, map_location=self.device)["state_dict"]
 
             if model_cfg.finetune.encoder.load_weights:
                 encoder_weights = collections.OrderedDict()
