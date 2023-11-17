@@ -254,10 +254,13 @@ def predict(
 
     global datamodule, model, af2_model, plugins, strategy, trainer
 
-    if datamodule is None:
-        log.info(f"Instantiating datamodule <{cfg.data._target_}>")
-        local_datamodule: LightningDataModule = hydra.utils.instantiate(cfg.data)
-        datamodule = local_datamodule
+    log.info(f"Instantiating datamodule <{cfg.data._target_}>")
+    local_datamodule: LightningDataModule = hydra.utils.instantiate(
+        cfg.data,
+        load_esm_model=False,
+        load_ankh_model=False,
+    )
+    datamodule = local_datamodule
 
     # load the general-purpose model
     if model is None:
@@ -434,4 +437,4 @@ def predict(
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=os.environ.get("PORT", 5000))  # nosec
+    app.run(host="0.0.0.0", port=os.environ.get("PORT", 80))  # nosec

@@ -496,18 +496,23 @@ class EMADataset(Dataset):
             protein_ca_atom_idx = torch.where(protein_atom_types == 2)[0]
 
             # add ESM sequence embeddings as scalar atom features that are shared between atoms of the same residue
-            batch_tokens = esm_batch_converter(protein_sequences)[2]
-            with torch.inference_mode():
-                results = esm_model(batch_tokens, repr_layers=[esm_model.num_layers])
-            token_representations = results["representations"][esm_model.num_layers].cpu()
-            protein_atom_representations = []
-            for i, (_, protein_sequence) in enumerate(protein_sequences):
-                representations = token_representations[i, 1 : len(protein_sequence) + 1]
-                protein_atom_representations.append(representations)
-            protein_atom_representations = torch.cat(protein_atom_representations, dim=0)
-            assert protein_atom_representations.size(0) * NUM_COORDINATES_PER_RESIDUE == len(
-                protein_coords
-            ), "Number of side-chain atoms must match."
+            if esm_model is not None and esm_batch_converter is not None:
+                batch_tokens = esm_batch_converter(protein_sequences)[2]
+                with torch.inference_mode():
+                    results = esm_model(batch_tokens, repr_layers=[esm_model.num_layers])
+                token_representations = results["representations"][esm_model.num_layers].cpu()
+                protein_atom_representations = []
+                for i, (_, protein_sequence) in enumerate(protein_sequences):
+                    representations = token_representations[i, 1 : len(protein_sequence) + 1]
+                    protein_atom_representations.append(representations)
+                protein_atom_representations = torch.cat(protein_atom_representations, dim=0)
+                assert protein_atom_representations.size(0) * NUM_COORDINATES_PER_RESIDUE == len(
+                    protein_coords
+                ), "Number of side-chain atoms must match."
+            else:
+                protein_atom_representations = torch.zeros(
+                    (len(protein_coords), 1280), dtype=torch.float32
+                )
 
             # associate atoms belonging to the same residue using unique atom-residue indices
             total_num_residues = sum([len(s[1]) for s in protein_sequences])
@@ -584,7 +589,11 @@ class EMADataset(Dataset):
                 torch.save(protein_data, str(protein_data_filepath))
 
         # ensure that Ankh sequence embeddings are present
-        if "protein_decoy_ankh_sequence_embedding" not in protein_data:
+        if (
+            ankh_model is not None
+            and ankh_tokenizer is not None
+            and "protein_decoy_ankh_sequence_embedding" not in protein_data
+        ):
             ankh_protein_sequences = [
                 [STANDARD_AMINO_ACIDS[idx] for idx in protein_data.protein_residue_types.tolist()]
             ]
