@@ -192,7 +192,7 @@ dependencies:
       - fastapi==0.103.2
       - fastcore==1.5.29
       - flask==3.0.0
-      - Flask-WTF==1.2.1
+      - flask-wtf==1.2.1
       - foldcomp==0.0.5
       - fonttools==4.43.1
       - frozenlist==1.4.0
