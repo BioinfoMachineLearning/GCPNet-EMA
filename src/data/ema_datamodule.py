@@ -43,7 +43,7 @@ class EMADataModule(LightningDataModule):
         predict_true_dir: Optional[str] = os.path.join("data", "EMA", "examples", "true_model"),
         predict_output_dir: str = os.path.join("data", "EMA", "examples", "outputs"),
         predict_batch_size: int = 1,
-        predict_pin_memory: bool = True,
+        predict_pin_memory: bool = False,
     ):
         """EMA data module."""
         super().__init__()

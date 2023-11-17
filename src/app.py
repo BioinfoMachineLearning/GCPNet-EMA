@@ -264,24 +264,48 @@ def predict(
         log.info(f"Instantiating model <{cfg.model._target_}>")
         with open_dict(cfg):
             cfg.model.model_cfg = validate_config(cfg.model.model_cfg)
-            cfg.model.model_cfg.ablate_esm_embeddings = cfg.data.ablate_esm_embeddings
-            cfg.model.model_cfg.ablate_ankh_embeddings = cfg.data.ablate_ankh_embeddings
-            cfg.model.model_cfg.ablate_af2_plddt = cfg.model.ablate_af2_plddt
-            cfg.model.model_cfg.ablate_gtn = cfg.model.ablate_gtn
-            cfg.model.model_cfg.gtn_walk_length = cfg.model.gtn_walk_length
-            cfg.model.model_cfg.gtn_emb_dim = cfg.model.gtn_emb_dim
-            cfg.model.model_cfg.gtn_attn_type = cfg.model.gtn_attn_type
-            cfg.model.model_cfg.gtn_dropout = cfg.model.gtn_dropout
-            cfg.model.model_cfg.gtn_pe_dim = cfg.model.gtn_pe_dim
-            cfg.model.model_cfg.gtn_num_layers = cfg.model.gtn_num_layers
         benchmark_model = BenchMarkModel(cfg.model.model_cfg)
+        with open_dict(cfg):
+            # remove unpickleable `nn.Modules` from `cfg.model.model_cfg`
+            model_cfg_finetune = DictConfig(
+                {
+                    "encoder": DictConfig(
+                        {
+                            "load_weights": cfg.model.model_cfg.finetune.encoder.load_weights,
+                            "freeze": cfg.model.model_cfg.finetune.encoder.freeze,
+                        }
+                    ),
+                    "decoder": DictConfig(
+                        {
+                            "load_weights": cfg.model.model_cfg.finetune.decoder.load_weights,
+                            "freeze": cfg.model.model_cfg.finetune.decoder.freeze,
+                        }
+                    ),
+                }
+            )
+            cfg.model.model_cfg = DictConfig(
+                {
+                    "ckpt_path": cfg.model.model_cfg.ckpt_path,
+                    "ablate_esm_embeddings": cfg.data.ablate_esm_embeddings,
+                    "ablate_ankh_embeddings": cfg.data.ablate_ankh_embeddings,
+                    "ablate_af2_plddt": cfg.model.ablate_af2_plddt,
+                    "ablate_gtn": cfg.model.ablate_gtn,
+                    "gtn_walk_length": cfg.model.gtn_walk_length,
+                    "gtn_emb_dim": cfg.model.gtn_emb_dim,
+                    "gtn_attn_type": cfg.model.gtn_attn_type,
+                    "gtn_dropout": cfg.model.gtn_dropout,
+                    "gtn_pe_dim": cfg.model.gtn_pe_dim,
+                    "gtn_num_layers": cfg.model.gtn_num_layers,
+                }
+            )
+            cfg.model.model_cfg.finetune = model_cfg_finetune
         local_model: LightningModule = hydra.utils.instantiate(
             cfg.model,
             model=benchmark_model,
             path_cfg=cfg.paths,
         )
         log.info("Loading checkpoint!")
-        local_model = local_model.load_from_checkpoint(
+        local_model = local_model.__class__.load_from_checkpoint(
             checkpoint_path=cfg.ckpt_path,
             map_location="cpu",
             strict=True,
@@ -295,24 +319,48 @@ def predict(
         log.info(f"Instantiating model <{af2_cfg.model._target_}>")
         with open_dict(af2_cfg):
             af2_cfg.model.model_cfg = validate_config(af2_cfg.model.model_cfg)
-            af2_cfg.model.model_cfg.ablate_esm_embeddings = af2_cfg.data.ablate_esm_embeddings
-            af2_cfg.model.model_cfg.ablate_ankh_embeddings = af2_cfg.data.ablate_ankh_embeddings
-            af2_cfg.model.model_cfg.ablate_af2_plddt = af2_cfg.model.ablate_af2_plddt
-            af2_cfg.model.model_cfg.ablate_gtn = af2_cfg.model.ablate_gtn
-            af2_cfg.model.model_cfg.gtn_walk_length = af2_cfg.model.gtn_walk_length
-            af2_cfg.model.model_cfg.gtn_emb_dim = af2_cfg.model.gtn_emb_dim
-            af2_cfg.model.model_cfg.gtn_attn_type = af2_cfg.model.gtn_attn_type
-            af2_cfg.model.model_cfg.gtn_dropout = af2_cfg.model.gtn_dropout
-            af2_cfg.model.model_cfg.gtn_pe_dim = af2_cfg.model.gtn_pe_dim
-            af2_cfg.model.model_cfg.gtn_num_layers = af2_cfg.model.gtn_num_layers
         benchmark_model = BenchMarkModel(af2_cfg.model.model_cfg)
+        with open_dict(af2_cfg):
+            # remove unpickleable `nn.Modules` from `af2_cfg.model.model_cfg`
+            model_cfg_finetune = DictConfig(
+                {
+                    "encoder": DictConfig(
+                        {
+                            "load_weights": af2_cfg.model.model_cfg.finetune.encoder.load_weights,
+                            "freeze": af2_cfg.model.model_cfg.finetune.encoder.freeze,
+                        }
+                    ),
+                    "decoder": DictConfig(
+                        {
+                            "load_weights": af2_cfg.model.model_cfg.finetune.decoder.load_weights,
+                            "freeze": af2_cfg.model.model_cfg.finetune.decoder.freeze,
+                        }
+                    ),
+                }
+            )
+            af2_cfg.model.model_cfg = DictConfig(
+                {
+                    "ckpt_path": af2_cfg.model.model_cfg.ckpt_path,
+                    "ablate_esm_embeddings": af2_cfg.data.ablate_esm_embeddings,
+                    "ablate_ankh_embeddings": af2_cfg.data.ablate_ankh_embeddings,
+                    "ablate_af2_plddt": af2_cfg.model.ablate_af2_plddt,
+                    "ablate_gtn": af2_cfg.model.ablate_gtn,
+                    "gtn_walk_length": af2_cfg.model.gtn_walk_length,
+                    "gtn_emb_dim": af2_cfg.model.gtn_emb_dim,
+                    "gtn_attn_type": af2_cfg.model.gtn_attn_type,
+                    "gtn_dropout": af2_cfg.model.gtn_dropout,
+                    "gtn_pe_dim": af2_cfg.model.gtn_pe_dim,
+                    "gtn_num_layers": af2_cfg.model.gtn_num_layers,
+                }
+            )
+            af2_cfg.model.model_cfg.finetune = model_cfg_finetune
         af2_local_model: LightningModule = hydra.utils.instantiate(
             af2_cfg.model,
             model=benchmark_model,
             path_cfg=af2_cfg.paths,
         )
         log.info("Loading checkpoint!")
-        af2_local_model = af2_local_model.load_from_checkpoint(
+        af2_local_model = af2_local_model.__class__.load_from_checkpoint(
             checkpoint_path=af2_cfg.ckpt_path,
             map_location="cpu",
             strict=True,

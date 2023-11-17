@@ -67,17 +67,41 @@ def predict(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     log.info(f"Instantiating model <{cfg.model._target_}>")
     with open_dict(cfg):
         cfg.model.model_cfg = validate_config(cfg.model.model_cfg)
-        cfg.model.model_cfg.ablate_esm_embeddings = cfg.data.ablate_esm_embeddings
-        cfg.model.model_cfg.ablate_ankh_embeddings = cfg.data.ablate_ankh_embeddings
-        cfg.model.model_cfg.ablate_af2_plddt = cfg.model.ablate_af2_plddt
-        cfg.model.model_cfg.ablate_gtn = cfg.model.ablate_gtn
-        cfg.model.model_cfg.gtn_walk_length = cfg.model.gtn_walk_length
-        cfg.model.model_cfg.gtn_emb_dim = cfg.model.gtn_emb_dim
-        cfg.model.model_cfg.gtn_attn_type = cfg.model.gtn_attn_type
-        cfg.model.model_cfg.gtn_dropout = cfg.model.gtn_dropout
-        cfg.model.model_cfg.gtn_pe_dim = cfg.model.gtn_pe_dim
-        cfg.model.model_cfg.gtn_num_layers = cfg.model.gtn_num_layers
     benchmark_model = BenchMarkModel(cfg.model.model_cfg)
+    with open_dict(cfg):
+        # remove unpickleable `nn.Modules` from `cfg.model.model_cfg`
+        model_cfg_finetune = DictConfig(
+            {
+                "encoder": DictConfig(
+                    {
+                        "load_weights": cfg.model.model_cfg.finetune.encoder.load_weights,
+                        "freeze": cfg.model.model_cfg.finetune.encoder.freeze,
+                    }
+                ),
+                "decoder": DictConfig(
+                    {
+                        "load_weights": cfg.model.model_cfg.finetune.decoder.load_weights,
+                        "freeze": cfg.model.model_cfg.finetune.decoder.freeze,
+                    }
+                ),
+            }
+        )
+        cfg.model.model_cfg = DictConfig(
+            {
+                "ckpt_path": cfg.model.model_cfg.ckpt_path,
+                "ablate_esm_embeddings": cfg.data.ablate_esm_embeddings,
+                "ablate_ankh_embeddings": cfg.data.ablate_ankh_embeddings,
+                "ablate_af2_plddt": cfg.model.ablate_af2_plddt,
+                "ablate_gtn": cfg.model.ablate_gtn,
+                "gtn_walk_length": cfg.model.gtn_walk_length,
+                "gtn_emb_dim": cfg.model.gtn_emb_dim,
+                "gtn_attn_type": cfg.model.gtn_attn_type,
+                "gtn_dropout": cfg.model.gtn_dropout,
+                "gtn_pe_dim": cfg.model.gtn_pe_dim,
+                "gtn_num_layers": cfg.model.gtn_num_layers,
+            }
+        )
+        cfg.model.model_cfg.finetune = model_cfg_finetune
     model: LightningModule = hydra.utils.instantiate(
         cfg.model,
         model=benchmark_model,

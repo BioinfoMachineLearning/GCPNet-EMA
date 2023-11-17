@@ -108,7 +108,13 @@ class GCPNetEMALitModule(LightningModule):
 
         # this line allows to access init params with `self.hparams` attribute
         # also ensures init params will be stored in ckpt
-        self.save_hyperparameters(logger=False, ignore=["model"])
+        self.save_hyperparameters(logger=False, ignore=["model", "model_cfg"])
+
+        # Manually-cached arguments for forward pass #
+        self.ablate_af2_plddt = model_cfg.ablate_af2_plddt
+        self.ablate_esm_embeddings = model_cfg.ablate_esm_embeddings
+        self.ablate_ankh_embeddings = model_cfg.ablate_ankh_embeddings
+        self.ablate_gtn = model_cfg.ablate_gtn
 
         # A `ProteinWorkshop` `LightningModule` #
         self.model = model
@@ -292,20 +298,17 @@ class GCPNetEMALitModule(LightningModule):
 
         # make a forward pass with the decoder
         decoder_in = [encoder_out["node_embedding"]]
-        if not self.hparams.model_cfg.ablate_af2_plddt and "alphafold_plddt_per_residue" in batch:
+        if not self.ablate_af2_plddt and "alphafold_plddt_per_residue" in batch:
             decoder_in.append(batch.alphafold_plddt_per_residue)
-        if (
-            not self.hparams.model_cfg.ablate_esm_embeddings
-            and "esm_embedding_per_residue" in batch
-        ):
+        if not self.ablate_esm_embeddings and "esm_embedding_per_residue" in batch:
             decoder_in.append(batch.esm_embedding_per_residue)
         if (
-            hasattr(self.hparams.model_cfg, "ablate_ankh_embeddings")
-            and not self.hparams.model_cfg.ablate_ankh_embeddings
+            hasattr(self, "ablate_ankh_embeddings")
+            and not self.ablate_ankh_embeddings
             and "ankh_embedding_per_residue" in batch
         ):
             decoder_in.append(batch.ankh_embedding_per_residue)
-        if hasattr(self.hparams.model_cfg, "ablate_gtn") and not self.hparams.model_cfg.ablate_gtn:
+        if hasattr(self, "ablate_gtn") and not self.ablate_gtn:
             self.gtn.redraw_projection.redraw_projections()
             gtn_out = self.gtn(
                 x=self.gtn_input_embedding(torch.cat(decoder_in, dim=-1)),
