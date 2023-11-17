@@ -31,6 +31,8 @@ data:
 model:
   ablate_af2_plddt: true
   ablate_gtn: true
+  model_cfg:
+    trainer: cpu
 logger: csv
 trainer:
   accelerator: cpu
