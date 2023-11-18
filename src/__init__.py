@@ -1,4 +1,5 @@
 import importlib
+import os
 
 from beartype.typing import Any
 from omegaconf import OmegaConf
@@ -30,4 +31,7 @@ def register_custom_omegaconf_resolvers():
     """Register custom OmegaConf resolvers."""
     OmegaConf.register_new_resolver(
         "resolve_variable", lambda variable_path: resolve_omegaconf_variable(variable_path)
+    )
+    OmegaConf.register_new_resolver(
+        "resolve_env_variable", lambda variable_name: os.environ.get(variable_name)
     )
