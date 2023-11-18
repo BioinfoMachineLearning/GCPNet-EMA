@@ -153,6 +153,7 @@ dmypy.json
 /server_predictions/
 .env
 *.csv*
+server_crontab_logfile.log
 checkpoints/*finetuned*.ckpt
 configs/local/default.yaml
 scripts/wandb/wandb_key_secret.yaml
