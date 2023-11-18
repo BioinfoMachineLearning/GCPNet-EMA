@@ -16,20 +16,30 @@
   <div class="mb-2 col-md-6 offset-md-3">
     <form action="/predict" method="POST" enctype="multipart/form-data">
       {{ form.hidden_tag() }} {# Include the CSRF token #}
-      <div class="input-group">
-        <div class="custom-file">
-          {{ form.file.label(class="custom-file-label", id="file-label") }}
-          {{ form.file(class="custom-file-input", id="file-input") }}
+      <div class="row">
+        <!-- First section for file upload -->
+        <div class="col-md-12 mb-2">
+          <div class="input-group">
+            <div class="custom-file">
+              {{ form.file.label(class="custom-file-label", id="file-label") }}
+              {{ form.file(class="custom-file-input", id="file-input") }}
+            </div>
+            <div class="input-group-append">
+              <input type="submit" value="Upload" class="btn btn-outline-secondary" id="inputGroupFileAddon04" />
+            </div>
+          </div>
         </div>
-        <div class="input-group-append">
-          <input type="submit" value="Upload" class="btn btn-outline-secondary"
-            id="inputGroupFileAddon04" />
+        <!-- Second section for the first checkbox -->
+        <div class="col-md-12 mb-2">
+          <div class="form-check">
+            {{ form.af2_input.label }} {{ form.af2_input() }}
+          </div>
         </div>
-        <div class="form-check ml-2">
-          {{ form.af2_input.label }} {{ form.af2_input() }}
-        </div>
-        <div class="form-check ml-2">
-          {{ form.cameo_input.label }} {{ form.cameo_input() }}
+        <!-- Third section for the second checkbox -->
+        <div class="col-md-12">
+          <div class="form-check">
+            {{ form.cameo_output.label }} {{ form.cameo_output() }}
+          </div>
         </div>
       </div>
     </form>
@@ -38,8 +48,9 @@
     <div class="col-sm-6 offset-sm-3 my-5">
       <center>
         <p class="text-muted">
-          For compatibility purposes, this application defaults to returning CAMEO-style per-residue structural deviations approximately in Angstroms.
-          Disabling this option will instead return AlphaFold-style per-residue plDDT scores.
+          For compatibility purposes, this application defaults to returning CAMEO-style per-residue structural error
+          predictions (approximately in Angstroms).
+          Disabling this option will instead return AlphaFold-style per-residue plDDT.
         </p>
       </center>
     </div>
@@ -48,11 +59,11 @@
 
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-      // When a file is selected, update the label text
-      document.getElementById("file-input").addEventListener("change", function () {
-          var filename = this.value.split("\\").pop();  // Get the filename from the full path
-          document.getElementById("file-label").innerText = filename;
-      });
+    // When a file is selected, update the label text
+    document.getElementById("file-input").addEventListener("change", function () {
+      var filename = this.value.split("\\").pop();  // Get the filename from the full path
+      document.getElementById("file-label").innerText = filename;
+    });
   });
 </script>
 

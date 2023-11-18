@@ -123,7 +123,7 @@ def success():
             if form.validate_on_submit():
                 pdb_file = form.file.data
                 af2_input = form.af2_input.data
-                cameo_input = form.cameo_input.data
+                cameo_output = form.cameo_output.data
 
                 global predict_cfg, af2_predict_cfg, model, af2_model, plugins, strategy, trainer
                 save_location = pdb_file.filename
@@ -142,16 +142,18 @@ def success():
                     af2_predict_cfg.data.predict_true_dir = None
                     af2_predict_cfg.data.predict_output_dir = predict_output_dir
                 shutil.move(save_location, new_save_location)
-                predict(predict_cfg, af2_predict_cfg, af2_input=af2_input, cameo_input=cameo_input)
+                predict(
+                    predict_cfg, af2_predict_cfg, af2_input=af2_input, cameo_output=cameo_output
+                )
                 prediction_df = pd.read_csv(trainer.model.predictions_csv_path)
                 annotated_pdb_filepath = prediction_df["predicted_annotated_pdb_filepath"].iloc[-1]
-                global_plddt = prediction_df["global_plddt"].iloc[-1].item()
+                global_score = prediction_df["global_score"].iloc[-1].item()
                 shutil.rmtree(predict_input_dir)
                 shutil.rmtree(predict_output_dir)
                 return render_template(
                     "prediction.html",
                     annotated_pdb_name=os.path.basename(annotated_pdb_filepath),
-                    global_plddt=f"{global_plddt:.2f}",
+                    global_score=f"{global_score:.2f}",
                 )
             else:
                 # form data is not valid, handle the validation errors
@@ -214,8 +216,9 @@ def predict_and_send_email():
                 af2_predict_cfg.data.predict_output_dir = predict_output_dir_
             shutil.move(save_location, new_save_location)
             af2_input = other_parameters is not None and "af2_input" in other_parameters
-            cameo_input = other_parameters is not None and "cameo_input" in other_parameters
-            predict(predict_cfg, af2_predict_cfg, af2_input=af2_input, cameo_input=cameo_input)
+            # NOTE: for email-based responses, we default to returning a CAMEO-style accuracy metric
+            af2_output = other_parameters is not None and "af2_output" in other_parameters
+            predict(predict_cfg, af2_predict_cfg, af2_input=af2_input, cameo_output=not af2_output)
             prediction_df = pd.read_csv(trainer.model.predictions_csv_path)
             annotated_pdb_filepath = prediction_df["predicted_annotated_pdb_filepath"].iloc[-1]
             shutil.rmtree(predict_input_dir_)
@@ -243,14 +246,14 @@ def predict_and_send_email():
 
 
 def predict(
-    cfg: DictConfig, af2_cfg: DictConfig, af2_input: bool = False, cameo_input: bool = False
+    cfg: DictConfig, af2_cfg: DictConfig, af2_input: bool = False, cameo_output: bool = False
 ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """Predicts with given checkpoint on a datamodule predictset.
 
     :param cfg: DictConfig configuration composed by Hydra.
     :param af2_cfg: DictConfig configuration composed by Hydra for AlphaFold 2 inputs.
     :param af2_input: Whether an AlphaFold 2 structure has been provided for assessment.
-    :param cameo_input: Whether to return a CAMEO-style accuracy metric.
+    :param cameo_output: Whether to return a CAMEO-style accuracy metric.
     :return: Tuple[dict, dict] with metrics and dict with all instantiated objects.
     """
     assert cfg.ckpt_path and af2_cfg.ckpt_path, "Checkpoint paths not provided!"
@@ -317,7 +320,7 @@ def predict(
             strict=True,
             path_cfg=hydra.utils.instantiate(cfg.paths),
             is_inference_run=True,
-            return_cameo_accuracy=cameo_input,
+            return_cameo_accuracy=cameo_output,
         )
         model = local_model
 
@@ -373,7 +376,7 @@ def predict(
             strict=True,
             path_cfg=hydra.utils.instantiate(af2_cfg.paths),
             is_inference_run=True,
-            return_cameo_accuracy=cameo_input,
+            return_cameo_accuracy=cameo_output,
         )
         af2_model = af2_local_model
 

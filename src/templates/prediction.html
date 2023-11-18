@@ -22,10 +22,10 @@
 
 <div class="pricing-header px-3 py-3 pt-md-5 pb-md-4 mx-auto text-center">
     <p class="lead">Predictions were successful.</p>
-    <p class="lead">Per-residue plDDTs in the form of B-factor PDB annotations are available for download:</p>
+    <p class="lead">Per-residue accuracy metrics in the form of B-factor PDB annotations are available for download:</p>
     <a href="{{ url_for('download_prediction', filename=annotated_pdb_name) }}" class="download-button">Download</a>
-    <p class="lead">Residue-averaged global plDDT:</p>
-    <p class="mt-3"><strong><u>{{global_plddt}}</u>%</strong></p>
+    <p class="lead">Residue-averaged global score:</p>
+    <p class="mt-3"><strong><u>{{global_score}}</u></strong></p>
     <p class="mt-5"> <a href="/">Predict for a new PDB file</a></p>
 </div>
 

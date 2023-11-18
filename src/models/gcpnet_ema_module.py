@@ -764,21 +764,21 @@ class GCPNetEMALitModule(LightningModule):
                     new_column_values=labels_,
                 )
                 ae_divisor = 1.0 if self.return_cameo_accuracy else plddt_scale_factor
-                initial_per_res_plddt_ae = (
+                initial_per_res_score_ae = (
                     np.abs(initial_res_scores_ - labels_).mean() / ae_divisor
                 )
-                pred_per_res_plddt_ae = np.abs(pred_res_scores_ - labels_).mean() / ae_divisor
+                pred_per_res_score_ae = np.abs(pred_res_scores_ - labels_).mean() / ae_divisor
             else:
                 true_path = None
-                initial_per_res_plddt_ae = None
-                pred_per_res_plddt_ae = None
+                initial_per_res_score_ae = None
+                pred_per_res_score_ae = None
             metrics["input_annotated_pdb_filepath"] = initial_pdb_filepath
             metrics["predicted_annotated_pdb_filepath"] = prediction_path
             metrics["true_annotated_pdb_filepath"] = true_path
-            metrics["global_plddt"] = pred_global_score_
-            metrics["plddt_loss"] = loss_
-            metrics["input_per_residue_plddt_absolute_error"] = initial_per_res_plddt_ae
-            metrics["predicted_per_residue_plddt_absolute_error"] = pred_per_res_plddt_ae
+            metrics["global_score"] = pred_global_score_
+            metrics["loss"] = loss_
+            metrics["input_per_residue_score_absolute_error"] = initial_per_res_score_ae
+            metrics["predicted_per_residue_score_absolute_error"] = pred_per_res_score_ae
             batch_metrics.append(metrics)
         return batch_metrics
 
