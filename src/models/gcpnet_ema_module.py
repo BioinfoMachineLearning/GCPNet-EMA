@@ -115,7 +115,6 @@ class GCPNetEMALitModule(LightningModule):
         self.ablate_esm_embeddings = model_cfg.ablate_esm_embeddings
         self.ablate_ankh_embeddings = model_cfg.ablate_ankh_embeddings
         self.ablate_gtn = model_cfg.ablate_gtn
-        self.return_cameo_accuracy = kwargs.get("return_cameo_accuracy", False)
 
         # A `ProteinWorkshop` `LightningModule` #
         self.model = model
@@ -610,6 +609,8 @@ class GCPNetEMALitModule(LightningModule):
 
     def on_predict_epoch_start(self):
         """Lightning hook that is called when the predict epoch begins."""
+        # reset the list of outputs
+        getattr(self, f"{self.predict_phase}_step_outputs").clear()
         # configure loss function for inference to report loss values per batch element
         self.criterion = torch.nn.SmoothL1Loss(reduction="none")
         # define where the final predictions should be recorded
@@ -707,6 +708,9 @@ class GCPNetEMALitModule(LightningModule):
         batch_loss = None if loss is None else loss.detach().cpu().numpy()
         batch_labels = None if labels is None else labels.detach().cpu().numpy()
         res_batch_index = batch.batch.detach().cpu().numpy()
+        batch_return_cameo_accuracy = getattr(
+            batch, "return_cameo_accuracy", [False] * batch.num_graphs
+        )
         for b_index in range(batch.num_graphs):
             metrics = {}
             temp_pdb_dir = tempfile._get_default_tempdir()
@@ -716,9 +720,14 @@ class GCPNetEMALitModule(LightningModule):
                 temp_pdb_dir / Path(f"predicted_{temp_pdb_code}").with_suffix(".pdb")
             )
             true_path = str(temp_pdb_dir / Path(f"true_{temp_pdb_code}").with_suffix(".pdb"))
+            return_cameo_accuracy = (
+                batch_return_cameo_accuracy[b_index].item()
+                if torch.is_tensor(batch_return_cameo_accuracy)
+                else batch_return_cameo_accuracy[b_index]
+            )
             # isolate each individual example within the current batch
             if initial_res_scores is not None:
-                if self.return_cameo_accuracy:
+                if return_cameo_accuracy:
                     initial_res_scores_ = (
                         1.0 - initial_res_scores[res_batch_index == b_index]
                     ) * cameo_accuracy_scale_factor
@@ -726,7 +735,7 @@ class GCPNetEMALitModule(LightningModule):
                     initial_res_scores_ = (
                         initial_res_scores[res_batch_index == b_index] * plddt_scale_factor
                     )
-            if self.return_cameo_accuracy:
+            if return_cameo_accuracy:
                 pred_res_scores_ = (
                     1.0 - pred_res_scores[res_batch_index == b_index]
                 ) * cameo_accuracy_scale_factor
@@ -737,7 +746,7 @@ class GCPNetEMALitModule(LightningModule):
                 pred_res_scores_ = pred_res_scores[res_batch_index == b_index] * plddt_scale_factor
                 pred_global_score_ = pred_global_scores[b_index] * plddt_scale_factor
             loss_ = np.nan if batch_loss is None else batch_loss[b_index]
-            if self.return_cameo_accuracy:
+            if return_cameo_accuracy:
                 labels_ = (
                     None
                     if batch_labels is None
@@ -763,7 +772,7 @@ class GCPNetEMALitModule(LightningModule):
                     column_name="b_factor",
                     new_column_values=labels_,
                 )
-                ae_divisor = 1.0 if self.return_cameo_accuracy else plddt_scale_factor
+                ae_divisor = 1.0 if return_cameo_accuracy else plddt_scale_factor
                 initial_per_res_score_ae = (
                     np.abs(initial_res_scores_ - labels_).mean() / ae_divisor
                 )

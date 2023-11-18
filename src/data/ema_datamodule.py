@@ -35,6 +35,7 @@ class EMADataModule(LightningDataModule):
         load_ankh_model: bool = True,
         ablate_esm_embeddings: bool = False,
         ablate_ankh_embeddings: bool = False,
+        return_cameo_accuracy: bool = False,
         batch_size: int = 1,
         num_workers: int = 0,
         pin_memory: bool = True,
@@ -105,12 +106,13 @@ class EMADataModule(LightningDataModule):
     @staticmethod
     @beartype
     def parse_inference_pdbs(
-        decoy_dir: str, true_dir: Optional[str] = None
+        decoy_dir: str, true_dir: Optional[str] = None, return_cameo_accuracy: bool = False
     ) -> List[Dict[str, Any]]:
         """Parse inference pdbs and return a list of dicts with decoy and true pdb paths.
 
         :param decoy_dir: path to decoy pdbs
         :param true_dir: path to true pdbs
+        :param return_cameo_accuracy: Whether to return a CAMEO-style accuracy metric.
         :return: list of dicts with decoy and true pdb paths
         """
         split_entries = []
@@ -123,7 +125,11 @@ class EMADataModule(LightningDataModule):
                     else None
                 )
                 split_entries.append(
-                    {"decoy_pdb": decoy_pdb_filepath, "true_pdb": true_pdb_filepath}
+                    {
+                        "decoy_pdb": decoy_pdb_filepath,
+                        "true_pdb": true_pdb_filepath,
+                        "return_cameo_accuracy": return_cameo_accuracy,
+                    }
                 )
         return split_entries
 
@@ -212,7 +218,9 @@ class EMADataModule(LightningDataModule):
 
         if stage and stage == "predict":
             predict_pdbs = self.parse_inference_pdbs(
-                decoy_dir=self.hparams.predict_input_dir, true_dir=self.hparams.predict_true_dir
+                decoy_dir=self.hparams.predict_input_dir,
+                true_dir=self.hparams.predict_true_dir,
+                return_cameo_accuracy=self.hparams.return_cameo_accuracy,
             )
             if len(predict_pdbs) == 0:
                 raise Exception("PDB inputs must be provided during model inference.")

@@ -265,6 +265,7 @@ def predict(
         cfg.data,
         load_esm_model=False,
         load_ankh_model=False,
+        return_cameo_accuracy=cameo_output,
     )
     datamodule = local_datamodule
 
@@ -320,7 +321,6 @@ def predict(
             strict=True,
             path_cfg=hydra.utils.instantiate(cfg.paths),
             is_inference_run=True,
-            return_cameo_accuracy=cameo_output,
         )
         model = local_model
 
@@ -376,7 +376,6 @@ def predict(
             strict=True,
             path_cfg=hydra.utils.instantiate(af2_cfg.paths),
             is_inference_run=True,
-            return_cameo_accuracy=cameo_output,
         )
         af2_model = af2_local_model
 

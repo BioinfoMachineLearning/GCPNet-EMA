@@ -893,7 +893,7 @@ class EMADataset(Dataset):
     ) -> Data:
         """Featurizes a PDB file as a graph.
 
-        :param pdb_filename_dict: dictionary of PDB filenames
+        :param pdb_filename_dict: dictionary of PDB filenames and optional metadata
         :param atom_df_name: name of the atom DataFrame
         :param chain_id_col: name of the chain ID column
         :return: data for a single PDB
@@ -964,5 +964,6 @@ class EMADataset(Dataset):
             )
         data["decoy_pdb_filepath"] = str(decoy_pdb_path)
         data["true_pdb_filepath"] = None if true_pdb_path is None else str(true_pdb_path)
+        data["return_cameo_accuracy"] = pdb_filename_dict.get("return_cameo_accuracy", False)
 
         return data
