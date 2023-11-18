@@ -194,7 +194,7 @@ Create a user cronjob (via `crontab -e`) that checks every five minutes to make 
 
 ```bash
 # NOTE: add this to your user cronjobs using `crontab -e`
-*/5 * * * * pgrep -f "gunicorn -w 4 -b gcpnet-ema.missouri.edu:80 --timeout 300 src.wsgi:app" || cd /bml/$USER/Repositories/Lab_Repositories/GCPNet-EMA && ~/mambaforge/condabin/mamba run -n GCPNet-EMA gunicorn -w 4 -b gcpnet-ema.missouri.edu:80 --timeout 300 src.wsgi:app >> /bml/$USER/Repositories/Lab_Repositories/GCPNet-EMA/server_crontab_logfile.log 2>&1
+*/5 * * * * pgrep -f "gunicorn -w 4 -b gcpnet-ema.missouri.edu:80 --timeout 300 src.wsgi:app" || ~/mambaforge/condabin/mamba run -n GCPNet-EMA cd /bml/$USER/Repositories/Lab_Repositories/GCPNet-EMA && gunicorn -w 4 -b gcpnet-ema.missouri.edu:80 --timeout 300 src.wsgi:app >> /bml/$USER/Repositories/Lab_Repositories/GCPNet-EMA/server_crontab_logfile.log 2>&1
 ```
 
 **NOTE**: You should substitute the `/bml/$USER/Repositories/Lab_Repositories/GCPNet-EMA` references above with the absolute path to your personal copy of the repository.
