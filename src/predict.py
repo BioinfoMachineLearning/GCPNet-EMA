@@ -88,7 +88,11 @@ def predict(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         )
         cfg.model.model_cfg = DictConfig(
             {
+                "name": cfg.model.model_cfg.name,
+                "seed": cfg.model.model_cfg.seed,
+                "num_workers": cfg.model.model_cfg.num_workers,
                 "ckpt_path": cfg.model.model_cfg.ckpt_path,
+                "task_name": cfg.model.model_cfg.task_name,
                 "ablate_esm_embeddings": cfg.data.ablate_esm_embeddings,
                 "ablate_ankh_embeddings": cfg.data.ablate_ankh_embeddings,
                 "ablate_af2_plddt": cfg.model.ablate_af2_plddt,

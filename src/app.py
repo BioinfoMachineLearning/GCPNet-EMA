@@ -295,7 +295,11 @@ def predict(
             )
             cfg.model.model_cfg = DictConfig(
                 {
+                    "name": cfg.model.model_cfg.name,
+                    "seed": cfg.model.model_cfg.seed,
+                    "num_workers": cfg.model.model_cfg.num_workers,
                     "ckpt_path": cfg.model.model_cfg.ckpt_path,
+                    "task_name": cfg.model.model_cfg.task_name,
                     "ablate_esm_embeddings": cfg.data.ablate_esm_embeddings,
                     "ablate_ankh_embeddings": cfg.data.ablate_ankh_embeddings,
                     "ablate_af2_plddt": cfg.model.ablate_af2_plddt,
@@ -350,7 +354,11 @@ def predict(
             )
             af2_cfg.model.model_cfg = DictConfig(
                 {
+                    "name": af2_cfg.model.model_cfg.name,
+                    "seed": af2_cfg.model.model_cfg.seed,
+                    "num_workers": af2_cfg.model.model_cfg.num_workers,
                     "ckpt_path": af2_cfg.model.model_cfg.ckpt_path,
+                    "task_name": af2_cfg.model.model_cfg.task_name,
                     "ablate_esm_embeddings": af2_cfg.data.ablate_esm_embeddings,
                     "ablate_ankh_embeddings": af2_cfg.data.ablate_ankh_embeddings,
                     "ablate_af2_plddt": af2_cfg.model.ablate_af2_plddt,
