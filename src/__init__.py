@@ -32,6 +32,4 @@ def register_custom_omegaconf_resolvers():
     OmegaConf.register_new_resolver(
         "resolve_variable", lambda variable_path: resolve_omegaconf_variable(variable_path)
     )
-    OmegaConf.register_new_resolver(
-        "resolve_env_variable", lambda variable_name: os.environ.get(variable_name)
-    )
+    OmegaConf.register_new_resolver("get_user_home_directory", lambda: os.path.expanduser("~"))
