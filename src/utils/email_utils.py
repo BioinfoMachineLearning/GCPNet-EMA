@@ -21,6 +21,7 @@ def send_email_with_attachment(
     sender: str,
     recipients: List[str],
     output_file: str,
+    output_file_ext_type: str,
     smtp_server: str = "massmail.missouri.edu",
     port: int = 587,
 ):
@@ -31,6 +32,7 @@ def send_email_with_attachment(
     :param sender: Sender email address.
     :param recipients: List of recipient email addresses.
     :param output_file: Path to output file to attach to email.
+    :param output_file_ext_type: Extension type of output file.
     :param smtp_server: SMTP server to use for sending email.
     :param port: Port to use for SMTP. This is required for `starttls()`.
     """
@@ -45,9 +47,11 @@ def send_email_with_attachment(
         part = MIMEBase("application", "octet-stream")
         part.set_payload(attachment.read())
     encoders.encode_base64(part)
+    # manually specify the attachment's filetype for `massmail` attachment support
+    filename = os.path.splitext(os.path.basename(output_file))[0] + f".{output_file_ext_type}"
     part.add_header(
         "Content-Disposition",
-        f"attachment; filename= {os.path.basename(output_file)}",
+        f"attachment; filename= {filename}",
     )
     msg.attach(part)
     # send email with message and attachment

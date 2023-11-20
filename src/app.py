@@ -231,6 +231,7 @@ def predict_and_send_email():
                 sender=os.environ["SERVER_EMAIL_ADDRESS"],
                 recipients=[results_email],
                 output_file=annotated_pdb_filepath,
+                output_file_ext_type="pdb",
                 smtp_server=os.environ["SERVER_EMAIL_SMTP_SERVER"],
                 port=int(os.environ["SERVER_EMAIL_PORT"]),
             )
