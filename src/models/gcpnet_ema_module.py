@@ -637,6 +637,9 @@ class GCPNetEMALitModule(LightningModule):
             _, preds = self.forward(batch)
             loss, labels = None, None
 
+        # clamp predictions to the range `[0, 1]`
+        preds = preds.clamp(0, 1)
+
         # collect per-model predictions
         global_preds = scatter(
             preds, batch.batch, dim=0, reduce="mean"
@@ -646,7 +649,7 @@ class GCPNetEMALitModule(LightningModule):
             # get batch-wise global plDDT loss
             loss = scatter(loss, batch.batch, dim=0, reduce="mean")
             # get initial residue-wise plDDT values from AlphaFold
-            batch.initial_res_scores = batch.alphafold_plddt_per_residue.squeeze(-1)
+            batch.initial_res_scores = batch.alphafold_plddt_per_residue.squeeze(-1).clamp(0, 1)
 
         # collect outputs, and visualize predicted lDDT scores
         step_outputs = self.record_ema_preds(
