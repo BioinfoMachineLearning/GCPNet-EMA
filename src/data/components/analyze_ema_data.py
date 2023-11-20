@@ -4,6 +4,7 @@ from pathlib import Path
 import hydra
 import matplotlib.pyplot as plt
 import rootutils
+import seaborn as sns
 from omegaconf import DictConfig
 from tqdm import tqdm
 
@@ -34,12 +35,39 @@ def main(cfg: DictConfig):
             global_scores.append(lddt_scores.mean())
 
     # plot the distribution of global plDDT scores
-    plt.hist(global_scores, bins=20)
+    plt.clf()
+    sns.kdeplot(global_scores, fill=True)
     plt.xlabel("Global plDDT Score")
-    plt.ylabel("Count")
-    plt.title("Distribution of Global plDDT Scores")
+    plt.ylabel("Density")
+    plt.title("Density Estimation of Global plDDT Scores for EMA Test Dataset")
+
+    # add vertical lines for thresholds with different colors and labels
+    thresholds = [1.0, 0.9, 0.7, 0.5]
+    threshold_colors = ["darkblue", "cyan", "gold", "orange"]
+    threshold_labels = ["Very High", "High", "Low", "Very Low"]
+
+    for th, color, label in zip(thresholds, threshold_colors, threshold_labels):
+        plt.axvline(x=th, linestyle="--", color=color, label=f"{label}: {th}", linewidth=1.5)
+
+    # count data points between thresholds and add captions
+    thresholds.sort(reverse=True)
+    for i in range(len(thresholds) - 1):
+        lower_threshold = thresholds[i]
+        upper_threshold = thresholds[i + 1]
+        points_in_region = sum(
+            1 for score in global_scores if lower_threshold >= score > upper_threshold
+        )
+        plt.text(
+            (lower_threshold + upper_threshold) / 2,
+            0.05,
+            f"{points_in_region} decoys",
+            ha="center",
+            fontsize=8,
+        )
+
+    plt.legend()
     plt.show()
-    plt.savefig("global_plddt_scores.png")
+    plt.savefig("ema_test_dataset_global_plddt_scores.png")
 
 
 if __name__ == "__main__":
