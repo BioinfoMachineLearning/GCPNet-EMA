@@ -212,7 +212,7 @@ GCPNet-EMA builds upon the source code and data from the following project(s):
 - [GCPNet](https://github.com/BioinfoMachineLearning/GCPNet)
 - [lightning-hydra-template](https://github.com/ashleve/lightning-hydra-template)
 - [ProteinWorkshop](https://github.com/a-r-j/ProteinWorkshop)
-- [Pytorch-Flask-Starer](https://github.com/imadtoubal/Pytorch-Flask-Starter)
+- [Pytorch-Flask-Starter](https://github.com/imadtoubal/Pytorch-Flask-Starter)
 
 We thank all their contributors and maintainers!
 
