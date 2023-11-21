@@ -34,12 +34,12 @@ def main(cfg: DictConfig):
             )
             global_scores.append(lddt_scores.mean())
 
-    # plot the distribution of global plDDT scores
+    # plot the distribution of global lDDT scores
     plt.clf()
     sns.kdeplot(global_scores, fill=True)
-    plt.xlabel("Global plDDT Score")
+    plt.xlabel("Global lDDT Score")
     plt.ylabel("Density")
-    plt.title("Density Estimation of Global plDDT Scores for EMA Test Dataset")
+    plt.title("Density Estimation of Global lDDT Scores for EMA Test Dataset")
 
     # add vertical lines for thresholds with different colors and labels
     thresholds = [1.0, 0.9, 0.7, 0.5]
@@ -67,7 +67,7 @@ def main(cfg: DictConfig):
 
     plt.legend()
     plt.show()
-    plt.savefig("ema_test_dataset_global_plddt_scores.png")
+    plt.savefig("ema_test_dataset_global_lddt_scores.png")
 
 
 if __name__ == "__main__":
