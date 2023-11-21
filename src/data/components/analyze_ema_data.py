@@ -47,7 +47,7 @@ def main(cfg: DictConfig):
     threshold_labels = ["Very High", "High", "Low", "Very Low"]
 
     for th, color, label in zip(thresholds, threshold_colors, threshold_labels):
-        plt.axvline(x=th, linestyle="--", color=color, label=f"{label}: {th}", linewidth=1.5)
+        plt.axvline(x=th, linestyle="--", color=color, label=f"{label}: < {th}", linewidth=1.5)
 
     # count data points between thresholds and add captions
     thresholds.sort(reverse=True)
