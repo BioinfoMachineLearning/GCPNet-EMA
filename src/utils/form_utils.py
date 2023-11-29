@@ -19,7 +19,7 @@ class PredictForm(FlaskForm):
         ],
     )
     af2_input = BooleanField("Is AlphaFold Structure")
-    cameo_output = BooleanField("Return CAMEO-Style Prediction", default=True)
+    cameo_output = BooleanField("Return CAMEO-Style Prediction", default=False)
 
 
 class ServerPredictForm(FlaskForm):

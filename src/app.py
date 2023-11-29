@@ -80,11 +80,65 @@ hydra.initialize(config_dir, version_base="1.3")
 cfg = hydra.compose(config_name=config_name, return_hydra_config=True)
 HydraConfig().cfg = cfg
 
+# allow users to select base and AF2 model configurations via environment variables
+# NOTE: default is configuration `0` for both base and AF2 models
 predict_cfg: DictConfig = cfg
 af2_predict_cfg: DictConfig = copy.deepcopy(cfg)
+with open_dict(predict_cfg):
+    if os.environ.get("SERVER_USE_CONFIG_1", False):
+        log.info("Using server config `1`!")
+        predict_cfg.ckpt_path = os.path.join(
+            "checkpoints",
+            "structure_ema_finetuned_gcpnet_without_esm_emb_x8tjgsf4_best_epoch_027.ckpt",
+        )
+        predict_cfg.model.ablate_af2_plddt = False
+    elif os.environ.get("SERVER_USE_CONFIG_2", False):
+        log.info("Using server config `2`!")
+        predict_cfg.ckpt_path = os.path.join(
+            "checkpoints",
+            "structure_ema_finetuned_gcpnet_without_plddt_ije6iplr_best_epoch_055.ckpt",
+        )
+        predict_cfg.data.ablate_esm_embeddings = False
+    elif os.environ.get("SERVER_USE_CONFIG_3", False):
+        log.info("Using server config `3`!")
+        predict_cfg.ckpt_path = os.path.join(
+            "checkpoints", "structure_ema_finetuned_gcpnet_i2d5t9xh_best_epoch_106.ckpt"
+        )
+        predict_cfg.data.ablate_esm_embeddings = False
+        predict_cfg.model.ablate_af2_plddt = False
+    else:
+        log.info("Using server config `0`!")
+        predict_cfg.ckpt_path = os.path.join(
+            "checkpoints",
+            "default_structure_ema_finetuned_gcpnet_without_plddt_or_esm_emb_p0p8c6pz_best_epoch_099.ckpt",
+        )
+
 with open_dict(af2_predict_cfg):
-    af2_predict_cfg.ckpt_path = af2_predict_cfg.af2_ckpt_path
     af2_predict_cfg.model.ablate_af2_plddt = False
+    if os.environ.get("SERVER_USE_CONFIG_1", False):
+        log.info("Using AF2 server config `1`!")
+        af2_predict_cfg.ckpt_path = os.path.join(
+            "checkpoints",
+            "structure_ema_finetuned_gcpnet_without_esm_emb_x8tjgsf4_best_epoch_027.ckpt",
+        )
+    elif os.environ.get("SERVER_USE_CONFIG_2", False):
+        log.info("Using AF2 server config `2`!")
+        af2_predict_cfg.ckpt_path = os.path.join(
+            "checkpoints", "structure_ema_finetuned_gcpnet_i2d5t9xh_best_epoch_106.ckpt"
+        )
+        predict_cfg.data.ablate_esm_embeddings = False
+    elif os.environ.get("SERVER_USE_CONFIG_3", False):
+        log.info("Using AF2 server config `3`!")
+        af2_predict_cfg.ckpt_path = os.path.join(
+            "checkpoints", "structure_ema_finetuned_gcpnet_i2d5t9xh_best_epoch_106.ckpt"
+        )
+        predict_cfg.data.ablate_esm_embeddings = False
+    else:
+        log.info("Using AF2 server config `0`!")
+        af2_predict_cfg.ckpt_path = os.path.join(
+            "checkpoints",
+            "structure_ema_finetuned_gcpnet_without_esm_emb_x8tjgsf4_best_epoch_027.ckpt",
+        )
 
 datamodule: Optional[LightningDataModule] = None
 model: Optional[LightningModule] = None
@@ -215,10 +269,10 @@ def predict_and_send_email():
                 af2_predict_cfg.data.predict_true_dir = None
                 af2_predict_cfg.data.predict_output_dir = predict_output_dir_
             shutil.move(save_location, new_save_location)
+            # parse optional input arguments
             af2_input = other_parameters is not None and "af2_input" in other_parameters
-            # NOTE: for email-based responses, we default to returning a CAMEO-style accuracy metric
-            af2_output = other_parameters is not None and "af2_output" in other_parameters
-            predict(predict_cfg, af2_predict_cfg, af2_input=af2_input, cameo_output=not af2_output)
+            cameo_output = other_parameters is not None and "cameo_output" in other_parameters
+            predict(predict_cfg, af2_predict_cfg, af2_input=af2_input, cameo_output=cameo_output)
             prediction_df = pd.read_csv(trainer.model.predictions_csv_path)
             annotated_pdb_filepath = prediction_df["predicted_annotated_pdb_filepath"].iloc[-1]
             shutil.rmtree(predict_input_dir_)
