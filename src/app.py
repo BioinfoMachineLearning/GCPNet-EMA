@@ -86,28 +86,28 @@ predict_cfg: DictConfig = cfg
 af2_predict_cfg: DictConfig = copy.deepcopy(cfg)
 with open_dict(predict_cfg):
     if os.environ.get("SERVER_USE_CONFIG_1", False):
-        log.info("Using server config `1`!")
+        print("Using server config `1`!")
         predict_cfg.ckpt_path = os.path.join(
             "checkpoints",
             "structure_ema_finetuned_gcpnet_without_esm_emb_x8tjgsf4_best_epoch_027.ckpt",
         )
         predict_cfg.model.ablate_af2_plddt = False
     elif os.environ.get("SERVER_USE_CONFIG_2", False):
-        log.info("Using server config `2`!")
+        print("Using server config `2`!")
         predict_cfg.ckpt_path = os.path.join(
             "checkpoints",
             "structure_ema_finetuned_gcpnet_without_plddt_ije6iplr_best_epoch_055.ckpt",
         )
         predict_cfg.data.ablate_esm_embeddings = False
     elif os.environ.get("SERVER_USE_CONFIG_3", False):
-        log.info("Using server config `3`!")
+        print("Using server config `3`!")
         predict_cfg.ckpt_path = os.path.join(
             "checkpoints", "structure_ema_finetuned_gcpnet_i2d5t9xh_best_epoch_106.ckpt"
         )
         predict_cfg.data.ablate_esm_embeddings = False
         predict_cfg.model.ablate_af2_plddt = False
     else:
-        log.info("Using server config `0`!")
+        print("Using server config `0`!")
         predict_cfg.ckpt_path = os.path.join(
             "checkpoints",
             "default_structure_ema_finetuned_gcpnet_without_plddt_or_esm_emb_p0p8c6pz_best_epoch_099.ckpt",
@@ -116,25 +116,25 @@ with open_dict(predict_cfg):
 with open_dict(af2_predict_cfg):
     af2_predict_cfg.model.ablate_af2_plddt = False
     if os.environ.get("SERVER_USE_CONFIG_1", False):
-        log.info("Using AF2 server config `1`!")
+        print("Using AF2 server config `1`!")
         af2_predict_cfg.ckpt_path = os.path.join(
             "checkpoints",
             "structure_ema_finetuned_gcpnet_without_esm_emb_x8tjgsf4_best_epoch_027.ckpt",
         )
     elif os.environ.get("SERVER_USE_CONFIG_2", False):
-        log.info("Using AF2 server config `2`!")
+        print("Using AF2 server config `2`!")
         af2_predict_cfg.ckpt_path = os.path.join(
             "checkpoints", "structure_ema_finetuned_gcpnet_i2d5t9xh_best_epoch_106.ckpt"
         )
         predict_cfg.data.ablate_esm_embeddings = False
     elif os.environ.get("SERVER_USE_CONFIG_3", False):
-        log.info("Using AF2 server config `3`!")
+        print("Using AF2 server config `3`!")
         af2_predict_cfg.ckpt_path = os.path.join(
             "checkpoints", "structure_ema_finetuned_gcpnet_i2d5t9xh_best_epoch_106.ckpt"
         )
         predict_cfg.data.ablate_esm_embeddings = False
     else:
-        log.info("Using AF2 server config `0`!")
+        print("Using AF2 server config `0`!")
         af2_predict_cfg.ckpt_path = os.path.join(
             "checkpoints",
             "structure_ema_finetuned_gcpnet_without_esm_emb_x8tjgsf4_best_epoch_027.ckpt",
@@ -318,7 +318,9 @@ def predict(
     log.info(f"Instantiating datamodule <{cfg.data._target_}>")
     local_datamodule: LightningDataModule = hydra.utils.instantiate(
         cfg.data,
-        load_esm_model=False,
+        load_esm_model=(
+            not cfg.data.ablate_esm_embeddings or not af2_cfg.data.ablate_esm_embeddings
+        ),
         load_ankh_model=False,
         return_cameo_accuracy=cameo_output,
     )
@@ -507,4 +509,4 @@ def predict(
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=os.environ.get("PORT", 80))  # nosec
+    app.run(host="127.0.0.1", port=os.environ.get("PORT", 5000))  # nosec

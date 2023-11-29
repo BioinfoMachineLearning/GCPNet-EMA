@@ -111,10 +111,10 @@ class GCPNetEMALitModule(LightningModule):
         self.save_hyperparameters(logger=False, ignore=["model", "model_cfg"])
 
         # Manually-cached arguments for forward pass #
-        self.ablate_af2_plddt = model_cfg.ablate_af2_plddt
-        self.ablate_esm_embeddings = model_cfg.ablate_esm_embeddings
-        self.ablate_ankh_embeddings = model_cfg.ablate_ankh_embeddings
-        self.ablate_gtn = model_cfg.ablate_gtn
+        self.ablate_af2_plddt = model_cfg.get("ablate_af2_plddt", False)
+        self.ablate_esm_embeddings = model_cfg.get("ablate_esm_embeddings", False)
+        self.ablate_ankh_embeddings = model_cfg.get("ablate_ankh_embeddings", True)
+        self.ablate_gtn = model_cfg.get("ablate_gtn", True)
 
         # A `ProteinWorkshop` `LightningModule` #
         self.model = model
