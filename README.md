@@ -181,24 +181,26 @@ diff environment.yaml env.yaml # note the differences and copy accepted changes 
 rm env.yaml # clean up temporary environment file
 ```
 
-Use `Gunicorn` to parallelize responses to web server requests across `4` workers using port `80`
+Use `Gunicorn` to parallelize responses to web server requests across `4` workers using port `5000`
 
 ```bash
-gunicorn -w 4 -b gcpnet-ema.missouri.edu:80 --timeout 300 src.wsgi:app
+gunicorn -w 4 -b 127.0.0.1:5000 --timeout 300 src.wsgi:app
 ```
 
 Test server locally using `curl`
 
 ```bash
-curl -X POST -F "title=6KHVA" -F "structure_upload=@data/EMA/test_examples/decoy_model/6KHVA.pdb" -F "results_email=username@email.com" http://gcpnet-ema.missouri.edu:80/server_predict
+curl -X POST -F "title=6KHVA" -F "structure_upload=@data/EMA/test_examples/decoy_model/6KHVA.pdb" -F "results_email=username@email.com" http://127.0.0.1:5000/server_predict
 ```
 
 Create a user cronjob (via `crontab -e`) that checks every five minutes to make sure the `Gunicorn` web server is running and, if it is not, starts the server by running the `Gunicorn` command above
 
 ```bash
 # NOTE: add this to your user cronjobs using `crontab -e`
-*/5 * * * * pgrep -f "gunicorn -w 4 -b gcpnet-ema.missouri.edu:80 --timeout 300 src.wsgi:app" || cd /bml/$USER/Repositories/Lab_Repositories/GCPNet-EMA && ~/mambaforge/condabin/mamba run -n GCPNet-EMA gunicorn -w 4 -b gcpnet-ema.missouri.edu:80 --timeout 300 --chdir /bml/$USER/Repositories/Lab_Repositories/GCPNet-EMA src.wsgi:app >> /bml/$USER/Repositories/Lab_Repositories/GCPNet-EMA/server_crontab_logfile.log 2>&1
+*/5 * * * * pgrep -f "gunicorn -w 4 -b 127.0.0.1:5000 --timeout 300 src.wsgi:app" || cd /bml/$USER/Repositories/Lab_Repositories/GCPNet-EMA && ~/mambaforge/condabin/mamba run -n GCPNet-EMA gunicorn -w 4 -b 127.0.0.1:5000 --timeout 300 --chdir /bml/$USER/Repositories/Lab_Repositories/GCPNet-EMA src.wsgi:app >> /bml/$USER/Repositories/Lab_Repositories/GCPNet-EMA/server_crontab_logfile.log 2>&1
 ```
+
+The server should now be publicly available at `gcpnet-ema.missouri.edu` when running it on port `5000` and at `gcpnet-ema-1.missouri.edu` when running it on port `5001`, and so on e.g., up to port `5003` (as configured locally via one's Apache server proxy).
 
 **NOTE**: You should substitute the `/bml/$USER/Repositories/Lab_Repositories/GCPNet-EMA` references above with the absolute path to your personal copy of the repository.
 
