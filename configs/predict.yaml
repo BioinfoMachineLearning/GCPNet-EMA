@@ -1,7 +1,6 @@
 # @package _global_
 
 defaults:
-  - _self_
   - data: ema # choose datamodule with `predict_dataloader()` for prediction
   - model: gcpnet_ema
   - logger: null
@@ -11,6 +10,7 @@ defaults:
   - extras: default
   - hydra: default
   - environment: default
+  - _self_
 
 task_name: "predict"
 
@@ -24,3 +24,7 @@ seed: 42
 
 # note: for WandB logging from certain remote GPU servers
 create_unverified_ssl_context: false
+
+# arguments to override
+model:
+  ablate_af2_plddt: true

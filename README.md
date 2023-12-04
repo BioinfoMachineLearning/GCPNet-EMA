@@ -104,11 +104,11 @@ python3 src/train.py experiment=gcpnet_ema.yaml
 Reproduce our results for the EMA task
 
 ```bash
-default_ema_model_ckpt_path="checkpoints/EMA/no_plddt_or_esm_emb_model.ckpt"
-af2_ema_model_ckpt_path="checkpoints/EMA/no_esm_emb_model.ckpt"
+default_ema_model_ckpt_path="checkpoints/default_structure_ema_finetuned_gcpnet_without_plddt_or_esm_emb_p0p8c6pz_best_epoch_099.ckpt"
+af2_ema_model_ckpt_path="checkpoints/structure_ema_finetuned_gcpnet_without_esm_emb_x8tjgsf4_best_epoch_027.ckpt"
 
-python3 src/eval.py data=ema model=gcpnet_ema logger=csv trainer.accelerator=gpu trainer.devices=1 ckpt_path="$default_ema_model_ckpt_path"
-python3 src/eval.py data=ema model=gcpnet_ema logger=csv trainer.accelerator=gpu trainer.devices=1 ckpt_path="$af2_ema_model_ckpt_path"
+python3 src/eval.py data=ema model=gcpnet_ema logger=csv trainer.accelerator=gpu trainer.devices=1 ckpt_path="$default_ema_model_ckpt_path" model.ablate_af2_plddt=true
+python3 src/eval.py data=ema model=gcpnet_ema logger=csv trainer.accelerator=gpu trainer.devices=1 ckpt_path="$af2_ema_model_ckpt_path" model.ablate_af2_plddt=false
 ```
 
 ```bash
@@ -144,17 +144,17 @@ AlphaFold EMA Model - No ESM Embeddings as Inputs
 Predict per-residue and per-model lDDT scores for 3D protein structures
 
 ```bash
-default_ema_model_ckpt_path="checkpoints/EMA/no_plddt_or_esm_emb_model.ckpt"
+default_ema_model_ckpt_path="checkpoints/default_structure_ema_finetuned_gcpnet_without_plddt_or_esm_emb_p0p8c6pz_best_epoch_099.ckpt"
 predict_batch_size=1  # adjust as desired according to available GPU memory
 num_workers=0  # note: required when initially processing new PDB file inputs, due to ESM's GPU usage
 
-python3 src/predict.py model=gcpnet_ema data=ema data.predict_input_dir=$MY_INPUT_PDB_DIR data.predict_true_dir=$MY_OPTIONAL_TRUE_PDB_DIR data.predict_output_dir=$MY_OUTPUTS_DIR data.predict_batch_size=$predict_batch_size data.num_workers=$num_workers logger=csv trainer.accelerator=gpu trainer.devices=1 ckpt_path="$default_ema_model_ckpt_path"
+python3 src/predict.py model=gcpnet_ema data=ema data.predict_input_dir=$MY_INPUT_PDB_DIR data.predict_true_dir=$MY_OPTIONAL_TRUE_PDB_DIR data.predict_output_dir=$MY_OUTPUTS_DIR data.predict_batch_size=$predict_batch_size data.num_workers=$num_workers logger=csv trainer.accelerator=gpu trainer.devices=1 ckpt_path="$default_ema_model_ckpt_path" model.ablate_af2_plddt=true
 ```
 
 For example, one can predict per-residue and per-model lDDT scores for a batch of tertiary protein structure inputs, `6W6VE.pdb` and `6W77K.pdb` within `data/EMA/examples/decoy_model`, as follows
 
 ```bash
-python3 src/predict.py model=gcpnet_ema data=ema data.predict_input_dir=data/EMA/examples/decoy_model data.predict_output_dir=data/EMA/examples/outputs data.predict_batch_size=1 data.num_workers=0 data.python_exec_path="$HOME"/mambaforge/envs/gcpnet/bin/python data.lddt_exec_path="$HOME"/mambaforge/envs/gcpnet/bin/lddt data.pdbtools_dir="$HOME"/mambaforge/envs/gcpnet/lib/python3.10/site-packages/pdbtools/ logger=csv trainer.accelerator=gpu trainer.devices=[0] ckpt_path=checkpoints/EMA/model.ckpt
+python3 src/predict.py model=gcpnet_ema data=ema data.predict_input_dir=data/EMA/examples/decoy_model data.predict_output_dir=data/EMA/examples/outputs data.predict_batch_size=1 data.num_workers=0 data.python_exec_path="$HOME"/mambaforge/envs/gcpnet/bin/python data.lddt_exec_path="$HOME"/mambaforge/envs/gcpnet/bin/lddt data.pdbtools_dir="$HOME"/mambaforge/envs/gcpnet/lib/python3.10/site-packages/pdbtools/ logger=csv trainer.accelerator=gpu trainer.devices=[0] ckpt_path=checkpoints/default_structure_ema_finetuned_gcpnet_without_plddt_or_esm_emb_p0p8c6pz_best_epoch_099.ckpt model.ablate_af2_plddt=true
 ```
 
 **Note**: After running the above command, an output CSV containing metadata for the predictions will be located at `logs/predict/runs/YYYY-MM-DD_HH-MM-SS/predict_YYYYMMDD_HHMMSS_rank_0_predictions.csv`, with text substitutions for the time at which the above command was completed. This CSV will contain a column called `predicted_annotated_pdb_filepath` that identifies the temporary location of each input PDB file after annotating it with GCPNet-EMA's predicted lDDT scores for each residue. If a directory containing ground-truth PDB files corresponding one-to-one with the inputs in `data.predict_input_dir` is provided as `data.predict_true_dir`, then metrics and PDB annotation filepaths will also be reported in the output CSV to quantitatively and qualitatively describe how well GCPNet-EMA was able to improve upon AlphaFold's initial per-residue plDDT values.
