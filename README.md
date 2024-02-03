@@ -225,9 +225,10 @@ We thank all their contributors and maintainers!
 If you use the code or data associated with this project, or otherwise find this work useful, please cite:
 
 ```bibtex
-@article{morehead2023gcpnet_ema,
+@article{morehead2024gcpnet_ema,
   title={Protein Structure Accuracy Estimation using Geometry-Complete Perceptron Networks},
-  author={Morehead, Alex and Cheng, Jianlin},
-  year={2023}
+  author={Morehead, Alex and Liu, Jian and Cheng, Jianlin},
+  journal={Protein Science}
+  year={2024}
 }
 ```
