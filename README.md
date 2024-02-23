@@ -16,7 +16,7 @@
 
 ## Description
 
-Source code for the paper "Protein Structure Accuracy Estimation using Geometry-Complete Perceptron Networks".
+Source code for the paper "[Protein Structure Accuracy Estimation using Geometry-Complete Perceptron Networks](https://onlinelibrary.wiley.com/doi/10.1002/pro.4932)".
 
 **NOTE**: A web server implementation is freely available at http://gcpnet-ema.missouri.edu.
 
