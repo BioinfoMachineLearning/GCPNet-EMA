@@ -146,6 +146,7 @@ dmypy.json
 
 # GCPNet-EMA
 /checkpoints/structure_denoising/
+/checkpoints/*.ckpt
 /data/
 /lightning_logs/
 /logs/
