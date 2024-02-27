@@ -6,11 +6,12 @@
 <a href="https://pytorchlightning.ai/"><img alt="Lightning" src="https://img.shields.io/badge/-Lightning-792ee5?logo=pytorchlightning&logoColor=white"></a>
 <a href="https://hydra.cc/"><img alt="Config: Hydra" src="https://img.shields.io/badge/Config-Hydra-89b8cd"></a>
 <a href="http://gcpnet-ema.missouri.edu/"><img alt="Server: Flask" src="https://img.shields.io/badge/Prediction-Server-blue"></a>
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10719475.svg)](https://doi.org/10.5281/zenodo.10719475)
 
 <!-- [![Paper](http://img.shields.io/badge/paper-arxiv.1001.2234-B31B1B.svg)](https://www.nature.com/articles/nature14539)
 [![Conference](http://img.shields.io/badge/AnyConference-year-4b44ce.svg)](https://papers.nips.cc/paper/2020) -->
 
-![GCP_Architecture.png](./img/GCPNet_for_Protein_Structure_EMA.png)
+![GCPNet_EMA_Overview.png](./img/GCPNet_for_Protein_Structure_EMA.png)
 
 </div>
 
@@ -78,17 +79,23 @@ Make sure to update the `tmscore_exec_path` value in e.g., `configs/paths/defaul
 
 ## GCPNet for protein structure EMA (`GCPNet-EMA`)
 
-### How to prepare data for `GCPNet-EMA`
+### How to prepare data and checkpoints for `GCPNet-EMA`
 
 Download training and evaluation data
 
 ```bash
 cd data/EMA/
-wget https://zenodo.org/record/8150859/files/ema_decoy_model.tar.gz
-wget https://zenodo.org/record/8150859/files/ema_true_model.tar.gz
+wget https://zenodo.org/record/10719475/files/ema_decoy_model.tar.gz
+wget https://zenodo.org/record/10719475/files/ema_true_model.tar.gz
 tar -xzf ema_decoy_model.tar.gz
 tar -xzf ema_true_model.tar.gz
 cd ../../  # head back to the root project directory
+
+wget -P checkpoints/ https://zenodo.org/record/10719475/files/structure_ema_finetuned_gcpnet_i2d5t9xh_best_epoch_106.ckpt
+wget -P checkpoints/ https://zenodo.org/record/10719475/files/structure_denoising_pretrained_gcpnet.ckpt
+wget -P checkpoints/ https://zenodo.org/record/10719475/files/structure_ema_finetuned_gcpnet_without_plddt_ije6iplr_best_epoch_055.ckpt
+wget -P checkpoints/ https://zenodo.org/record/10719475/files/default_structure_ema_finetuned_gcpnet_without_plddt_or_esm_emb_p0p8c6pz_best_epoch_099.ckpt
+wget -P checkpoints/ https://zenodo.org/record/10719475/files/structure_ema_finetuned_gcpnet_without_esm_emb_x8tjgsf4_best_epoch_027.ckpt
 ```
 
 ### How to train `GCPNet-EMA`
@@ -96,19 +103,21 @@ cd ../../  # head back to the root project directory
 Train a model for the estimation of protein structure model accuracy (**EMA**) task
 
 ```bash
-python3 src/train.py experiment=gcpnet_ema.yaml
+# NOTE: adjust feature ablation arguments as desired
+python3 src/train.py experiment=gcpnet_ema.yaml model.ablate_af2_plddt=true model.ablate_gtn=true data.ablate_ankh_embeddings=true data.ablate_esm_embeddings=true
 ```
 
 ### How to evaluate `GCPNet-EMA`
 
-Reproduce our results for the EMA task
+Reproduce our results for the (tertiary structure) EMA task
 
 ```bash
 default_ema_model_ckpt_path="checkpoints/default_structure_ema_finetuned_gcpnet_without_plddt_or_esm_emb_p0p8c6pz_best_epoch_099.ckpt"
 af2_ema_model_ckpt_path="checkpoints/structure_ema_finetuned_gcpnet_without_esm_emb_x8tjgsf4_best_epoch_027.ckpt"
 
-python3 src/eval.py data=ema model=gcpnet_ema logger=csv trainer.accelerator=gpu trainer.devices=1 ckpt_path="$default_ema_model_ckpt_path" model.ablate_af2_plddt=true
-python3 src/eval.py data=ema model=gcpnet_ema logger=csv trainer.accelerator=gpu trainer.devices=1 ckpt_path="$af2_ema_model_ckpt_path" model.ablate_af2_plddt=false
+# NOTE: ensure feature ablation arguments match checkpoint type
+python3 src/eval.py data=ema model=gcpnet_ema logger=csv trainer.accelerator=gpu trainer.devices=1 ckpt_path="$default_ema_model_ckpt_path" model.ablate_af2_plddt=true model.ablate_gtn=true data.ablate_ankh_embeddings=true data.ablate_esm_embeddings=true
+python3 src/eval.py data=ema model=gcpnet_ema logger=csv trainer.accelerator=gpu trainer.devices=1 ckpt_path="$af2_ema_model_ckpt_path" model.ablate_af2_plddt=false model.ablate_gtn=true data.ablate_ankh_embeddings=true data.ablate_esm_embeddings=true
 ```
 
 ```bash
@@ -139,6 +148,8 @@ AlphaFold EMA Model - No ESM Embeddings as Inputs
 └────────────────────────────────┴────────────────────────────────┘
 ```
 
+**Note**: Please contact us if you are interested in reproducing our results for the multimer structure EMA task as described in the manuscript. We would be happy to provide you with a copy of this corresponding dataset as desired.
+
 ### How to predict lDDT scores for protein structures using `GCPNet-EMA`
 
 Predict per-residue and per-model lDDT scores for 3D protein structures
@@ -148,13 +159,14 @@ default_ema_model_ckpt_path="checkpoints/default_structure_ema_finetuned_gcpnet_
 predict_batch_size=1  # adjust as desired according to available GPU memory
 num_workers=0  # note: required when initially processing new PDB file inputs, due to ESM's GPU usage
 
-python3 src/predict.py model=gcpnet_ema data=ema data.predict_input_dir=$MY_INPUT_PDB_DIR data.predict_true_dir=$MY_OPTIONAL_TRUE_PDB_DIR data.predict_output_dir=$MY_OUTPUTS_DIR data.predict_batch_size=$predict_batch_size data.num_workers=$num_workers logger=csv trainer.accelerator=gpu trainer.devices=1 ckpt_path="$default_ema_model_ckpt_path" model.ablate_af2_plddt=true
+# NOTE: ensure feature ablation arguments match checkpoint type
+python3 src/predict.py model=gcpnet_ema data=ema data.predict_input_dir=$MY_INPUT_PDB_DIR data.predict_true_dir=$MY_OPTIONAL_TRUE_PDB_DIR data.predict_output_dir=$MY_OUTPUTS_DIR data.predict_batch_size=$predict_batch_size data.num_workers=$num_workers logger=csv trainer.accelerator=gpu trainer.devices=1 ckpt_path="$default_ema_model_ckpt_path" model.ablate_af2_plddt=true model.ablate_gtn=true data.ablate_ankh_embeddings=true data.ablate_esm_embeddings=true
 ```
 
 For example, one can predict per-residue and per-model lDDT scores for a batch of tertiary protein structure inputs, `6W6VE.pdb` and `6W77K.pdb` within `data/EMA/examples/decoy_model`, as follows
 
 ```bash
-python3 src/predict.py model=gcpnet_ema data=ema data.predict_input_dir=data/EMA/examples/decoy_model data.predict_output_dir=data/EMA/examples/outputs data.predict_batch_size=1 data.num_workers=0 data.python_exec_path="$HOME"/mambaforge/envs/gcpnet/bin/python data.lddt_exec_path="$HOME"/mambaforge/envs/gcpnet/bin/lddt data.pdbtools_dir="$HOME"/mambaforge/envs/gcpnet/lib/python3.10/site-packages/pdbtools/ logger=csv trainer.accelerator=gpu trainer.devices=[0] ckpt_path=checkpoints/default_structure_ema_finetuned_gcpnet_without_plddt_or_esm_emb_p0p8c6pz_best_epoch_099.ckpt model.ablate_af2_plddt=true
+python3 src/predict.py model=gcpnet_ema data=ema data.predict_input_dir=data/EMA/examples/decoy_model data.predict_output_dir=data/EMA/examples/outputs data.predict_batch_size=1 data.num_workers=0 data.python_exec_path="$HOME"/mambaforge/envs/gcpnet/bin/python data.lddt_exec_path="$HOME"/mambaforge/envs/gcpnet/bin/lddt data.pdbtools_dir="$HOME"/mambaforge/envs/gcpnet/lib/python3.10/site-packages/pdbtools/ logger=csv trainer.accelerator=gpu trainer.devices=[0] ckpt_path=checkpoints/default_structure_ema_finetuned_gcpnet_without_plddt_or_esm_emb_p0p8c6pz_best_epoch_099.ckpt model.ablate_af2_plddt=true model.ablate_gtn=true data.ablate_ankh_embeddings=true data.ablate_esm_embeddings=true
 ```
 
 **Note**: After running the above command, an output CSV containing metadata for the predictions will be located at `logs/predict/runs/YYYY-MM-DD_HH-MM-SS/predict_YYYYMMDD_HHMMSS_rank_0_predictions.csv`, with text substitutions for the time at which the above command was completed. This CSV will contain a column called `predicted_annotated_pdb_filepath` that identifies the temporary location of each input PDB file after annotating it with GCPNet-EMA's predicted lDDT scores for each residue. If a directory containing ground-truth PDB files corresponding one-to-one with the inputs in `data.predict_input_dir` is provided as `data.predict_true_dir`, then metrics and PDB annotation filepaths will also be reported in the output CSV to quantitatively and qualitatively describe how well GCPNet-EMA was able to improve upon AlphaFold's initial per-residue plDDT values.
