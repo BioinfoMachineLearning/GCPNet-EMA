@@ -374,6 +374,7 @@ def predict(
             cfg.model,
             model=benchmark_model,
             path_cfg=cfg.paths,
+            log_checkpoint_info=False,
         )
         log.info("Loading checkpoint!")
         local_model = local_model.__class__.load_from_checkpoint(
@@ -382,6 +383,7 @@ def predict(
             strict=True,
             path_cfg=hydra.utils.instantiate(cfg.paths),
             is_inference_run=True,
+            log_checkpoint_info=False,
         )
         model = local_model
 
@@ -433,6 +435,7 @@ def predict(
             af2_cfg.model,
             model=benchmark_model,
             path_cfg=af2_cfg.paths,
+            log_checkpoint_info=False,
         )
         log.info("Loading checkpoint!")
         af2_local_model = af2_local_model.__class__.load_from_checkpoint(
@@ -441,6 +444,7 @@ def predict(
             strict=True,
             path_cfg=hydra.utils.instantiate(af2_cfg.paths),
             is_inference_run=True,
+            log_checkpoint_info=False,
         )
         af2_model = af2_local_model
 
