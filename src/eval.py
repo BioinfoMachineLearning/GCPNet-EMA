@@ -114,6 +114,7 @@ def evaluate(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         cfg.model,
         model=benchmark_model,
         path_cfg=cfg.paths,
+        log_checkpoint_info=False,
     )
 
     log.info("Instantiating loggers...")
@@ -180,6 +181,7 @@ def evaluate(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         strict=True,
         path_cfg=hydra.utils.instantiate(cfg.paths),
         is_inference_run=True,
+        log_checkpoint_info=False,
     )
 
     log.info("Starting testing!")
