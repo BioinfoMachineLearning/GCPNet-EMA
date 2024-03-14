@@ -221,9 +221,10 @@ class GCPNetEMALitModule(LightningModule):
                 for param in self.model.decoder.parameters():
                     param.requires_grad = False
         else:
-            log.info(
-                "A valid checkpoint path was not found. Training a new set of weights for the `BenchMarkModel`..."
-            )
+            if kwargs.get("log_checkpoint_info", True):
+                log.info(
+                    "A valid checkpoint path was not found. Training a new set of weights for the `BenchMarkModel`..."
+                )
 
         # loss function and metrics #
         self.criterion = torch.nn.SmoothL1Loss()
