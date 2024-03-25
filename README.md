@@ -25,7 +25,7 @@ Source code for the paper "[Protein Structure Accuracy Estimation using Geometry
 
 - [Installation](#installation)
 - [GCPNet for protein structure EMA (GCPNet-EMA)](#gcpnet-for-protein-structure-ema-gcpnet-ema)
-  - [How to prepare data for GCPNet-EMA](#how-to-prepare-data-for-gcpnet-ema)
+  - [How to prepare data for GCPNet-EMA](#how-to-prepare-data-and-checkpoints-for-gcpnet-ema)
   - [How to train GCPNet-EMA](#how-to-train-gcpnet-ema)
   - [How to evaluate GCPNet-EMA](#how-to-evaluate-gcpnet-ema)
   - [How to predict lDDT scores for new protein structures using GCPNet-EMA](#how-to-predict-lddt-scores-for-protein-structures-using-gcpnet-ema)
