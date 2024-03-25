@@ -81,7 +81,7 @@ Make sure to update the `tmscore_exec_path` value in e.g., `configs/paths/defaul
 
 ### How to prepare data and checkpoints for `GCPNet-EMA`
 
-Download training and evaluation data
+Download training and evaluation data as well as `GCPNet-EMA` model checkpoints
 
 ```bash
 cd data/EMA/
